@@ -6,7 +6,7 @@ See https://en.wikipedia.org/wiki/KC_85
 
 ## The MiSTer Core
 
-The core is in a pretty basic state right now, there is no support for tape input or *.KCC files yet.
+The core is in a pretty basic state right now, there is no support for tape input or *.KCC files yet. But *.TAP files work.
 
 Type BASIC at the OS prompt to start the basic interpreter from ROM.
 

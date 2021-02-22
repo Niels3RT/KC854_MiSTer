@@ -205,7 +205,7 @@ localparam CONF_STR = {
 	"-;",
 	"O34,CPU Turbo,1x,2x,4x,8x;",
 	"-;",
-	"F,KCC,Load Tape;",
+	"F,TAP,Load Tape;",
 	"-;",
 	"T0,Reset;",
 	"R0,Reset and close OSD;",
@@ -216,6 +216,13 @@ wire forced_scandoubler;
 wire  [1:0] buttons;
 wire [31:0] status;
 wire [10:0] ps2_key;
+
+wire        ioctl_wr;
+wire [24:0] ioctl_addr;
+wire  [7:0] ioctl_data;
+wire  [7:0] ioctl_index;
+wire        ioctl_download;
+reg         ioctl_req_wr;
 
 hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 (
@@ -231,7 +238,14 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.status(status),
 	.status_menumask({status[5]}),
 	
-	.ps2_key(ps2_key)
+	.ps2_key(ps2_key),
+	
+	.ioctl_download(ioctl_download),
+	.ioctl_index(ioctl_index),
+	.ioctl_wr(ioctl_wr),
+	.ioctl_addr(ioctl_addr),
+	.ioctl_dout(ioctl_data),
+	.ioctl_wait(ioctl_req_wr)
 );
 
 ///////////////////////   CLOCKS   ///////////////////////////////
@@ -285,7 +299,15 @@ kc854 kc854
 	
 	.LED_USER(LED_USER),
 	.LED_POWER(LED_POWER),
-	.LED_DISK(LED_DISK)
+	.LED_DISK(LED_DISK),
+	
+	.hps_status(status),
+	.ioctl_download(ioctl_download),
+	.ioctl_index(ioctl_index),
+	.ioctl_wr(ioctl_wr),
+	.ioctl_addr(ioctl_addr),
+	.ioctl_data(ioctl_data),
+	.ioctl_wait(ioctl_req_wr)
 );
 
 assign CLK_VIDEO = clk_vga;

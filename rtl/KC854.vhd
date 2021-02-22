@@ -59,7 +59,15 @@ entity kc854 is
 		
 		LED_USER			: out std_logic;
 		LED_POWER		: out std_logic_vector(1 downto 0);
-		LED_DISK			: out std_logic_vector(1 downto 0)
+		LED_DISK			: out std_logic_vector(1 downto 0);
+		
+		hps_status		: in  std_logic_vector(31 downto 0);
+		ioctl_download	: in  std_logic;
+		ioctl_index		: in  std_logic_vector(7 downto 0);
+		ioctl_wr			: in  std_logic;
+		ioctl_addr		: in  std_logic_vector(24 downto 0);
+		ioctl_data		: in  std_logic_vector(7 downto 0);
+		ioctl_wait		: out  std_logic
     );
 end kc854;
 
@@ -308,7 +316,7 @@ begin
 	-- PIO: 88H-8BH
 	pioCS_n <= '0' when cpuAddr(7 downto 2) = "100010"  and ioSel else '1';
 
-	pioAStb <= '1';
+	--pioAStb <= '1';
 	pioAIn  <= (others => '1');
 	pioBIn  <= (others => '1');
 
@@ -400,6 +408,25 @@ begin
 			intAck  => intAckPeriph(3 downto 0),
 			clk_trg => ctcClkTrg,
 			zc_to   => ctcZcTo
+		);
+	
+	-- tape
+	tape : entity work.tape
+		port map (
+			clk			=> cpuclk,
+			reset_n		=> cpuReset_n,
+			
+			LED_DISK		=> LED_DISK,
+			
+			tape_out		=> pioAStb,
+			
+			hps_status  => hps_status,
+			ioctl_download => ioctl_download,
+			ioctl_index => ioctl_index,
+			ioctl_wr    => ioctl_wr,
+			ioctl_addr  => ioctl_addr,
+			ioctl_data  => ioctl_data,
+			ioctl_wait  => ioctl_wait
 		);
 
 	m003TestUart <= '1' when (not ctcCS_n='0') else '0';
