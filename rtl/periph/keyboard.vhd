@@ -1,3 +1,6 @@
+--
+-- some things rewritten to suit MiSTer keyboard input Niels Lueddecke in 2021
+--
 -- Copyright (c) 2015, $ME
 -- All rights reserved.
 --
@@ -29,7 +32,6 @@ use IEEE.numeric_std.all;
 
 entity keyboard is
 		generic (
-			--SYSCLK : integer := 50_000_0
 			SYSCLK : integer := 50_000_000
 		);
 		port (
@@ -78,7 +80,6 @@ architecture rtl of keyboard is
 	signal lshift				: boolean := false;
 	signal altkey				: boolean := false;
 
-	--signal breakcode			: boolean;
 	signal keydown				: boolean;
 	signal keydownDelayed	: boolean;
 	signal keyup				: boolean;
@@ -99,41 +100,40 @@ begin
 	keystates : process
 	begin
 		wait until rising_edge(clk);
-
+		
 		keydown <= false;
 		keyup   <= false;
 		
-		if (rcvd='1') then
-				if (scancode = x"59") then -- shift rechts
-					if scanstate = '1' then
-						rshift <= true;
-					else
-						rshift <= false;
-					end if;
-				elsif (scancode = x"12") then -- shift links
-					if scanstate = '1' then
-						lshift <= true;
-					else
-						lshift <= false;
-					end if;
-				elsif (scancode = x"11") then -- alt / alt gr
-					if scanstate = '1' then
-						altkey <= true;
-					else
-						altkey <= false;
-					end if;
-				elsif (scancode /= x"e0" and scancode /= x"e1") then -- e0/e1 ignorieren
-					if scanstate = '1' then
-						if keycode_last /= scancode then
-							keydown <= true;
-						end if;
-					else
-						keyup <= true;
-						keycode_last <= x"00";
-					end if;
-					keycode <= scancode;
+		if (rcvd = '1') then
+			if (scancode = x"59") then -- shift rechts
+				if scanstate = '1' then
+					rshift <= true;
+				else
+					rshift <= false;
 				end if;
-			--end if;
+			elsif (scancode = x"12") then -- shift links
+				if scanstate = '1' then
+					lshift <= true;
+				else
+					lshift <= false;
+				end if;
+			elsif (scancode = x"11") then -- alt / alt gr
+				if scanstate = '1' then
+					altkey <= true;
+				else
+					altkey <= false;
+				end if;
+			elsif (scancode /= x"e0" and scancode /= x"e1") then -- e0/e1 ignorieren
+				if scanstate = '1' then
+					if keycode_last /= scancode then
+						keydown <= true;
+						keycode <= scancode;
+					end if;
+				else
+					keyup <= true;
+					keycode_last <= x"00";
+				end if;
+			end if;
 		end if;
 	end process;
  
@@ -301,37 +301,7 @@ begin
             when others => iKey <= 128; -- no key
         end case;
     end process;
- 
-	-- handle keypress and repeat
-	keypress : process
-	begin
-		wait until rising_edge(clk);
 		
-		-- fresh key is pressed
-		if keydownDelayed = true then
-			key <= std_logic_vector(to_unsigned(iKey,8));
-			key_cnt <= key_cnt + 1;
-			key_repeat_state <= '1';
-			key_repeat_cnt   <= x"01500000";
-		end if;
-		
-		-- key is released
-		if keyupDelayed = true then
-			key_repeat_state <= '0';
-		end if;
-		
-		-- key repeat
-		if key_repeat_state = '1' then
-			if key_repeat_cnt > 0 then
-				key_repeat_cnt <= key_repeat_cnt - 1;
-			else
-				key_repeat_cnt <= x"00900000";
-				key_cnt <= key_cnt + 1;
-			end if;
-		end if;
-		
-	end process;
- 
 	-- clock fuer ausgang -> 1024Hz
 	divider : process
 	begin
@@ -385,18 +355,33 @@ begin
 					else
 						pulseCnt <= 4; -- 0 Bit
 				end if;
-
 				keyShift <= '0' & keyShift(7 downto 1);
 				remo <= '1';
 			elsif (keyRepeat > 0) then
 				keyRepeat <= keyRepeat - 1;
 				keyShift <= currentKey;
-			elsif (key_cnt_old /= key_cnt) then
-				key_cnt_old <= key_cnt_old + 1;
-				keyRepeat  <= 2;
+			-- in turbo mode single key press only
+			elsif (key_cnt_old /= key_cnt) or (key_repeat_state = '1' and turbo = b"00") then
+				key_cnt_old <= key_cnt;
+				keyRepeat  <= 0;
 				keyShift   <= '1' & key(6 downto 0);
 				currentKey <= '1' & key(6 downto 0);
 			end if;
+		end if;
+		
+		-- fresh key is pressed
+		if keydownDelayed = true then
+			key <= std_logic_vector(to_unsigned(iKey,8));
+			currentKey <= '1' & std_logic_vector(to_unsigned(iKey,7));
+			key_cnt <= key_cnt + 1;
+			key_repeat_state <= '1';
+			keyRepeat  <= 1;
+			key_repeat_cnt   <= x"00380000";
+		end if;
+		
+		-- key is released
+		if keyupDelayed = true then
+			key_repeat_state <= '0';
 		end if;
 	end process;
 end;

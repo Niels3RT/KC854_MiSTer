@@ -168,7 +168,6 @@ begin
 
 	-- reset
 	cpuReset_n <= '0' when resetDelay /= 0 else '1';
-	LED_USER <= turbo(0);
 
 	reset : process
 	begin
@@ -363,7 +362,7 @@ begin
 		if rising_edge(cpuclk) then
 			old_stb <= ps2_key(10);
 			if old_stb /= ps2_key(10) then
-				--LED_USER  <= ps2_key(9);
+				LED_USER  <= ps2_key(9);
 				ps2_state <= ps2_key(9);		-- 1 key down, 0 not down
 				ps2_code  <= ps2_key(7 downto 0);
 				ps2_rcvd  <= '1';
@@ -415,11 +414,9 @@ begin
 		port map (
 			clk			=> cpuclk,
 			reset_n		=> cpuReset_n,
-			
 			LED_DISK		=> LED_DISK,
-			
 			tape_out		=> pioAStb,
-			
+			turbo    	=> turbo,
 			hps_status  => hps_status,
 			ioctl_download => ioctl_download,
 			ioctl_index => ioctl_index,

@@ -31,9 +31,6 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
 
 entity tape is 
-	generic  (
-		BIT_DIVIDE_MAX	: integer := 5208 -- 417us/4 at 50MHz
-	);
 	port (
 		clk      		: in std_logic;
 		reset_n			: in std_logic;
@@ -41,6 +38,8 @@ entity tape is
 		LED_DISK			: out std_logic_vector(1 downto 0);
 		
 		tape_out			: out std_logic;
+		
+		turbo				: in  std_logic_vector(1 downto 0);
 		
 		hps_status		: in  std_logic_vector(31 downto 0);
 		ioctl_download	: in  std_logic;
@@ -53,35 +52,38 @@ entity tape is
 end tape;
 
 	architecture rtl of tape is
-		signal divide_bit		: unsigned(16 downto 0) := (others => '0');
+		signal C_BIT_DIVIDE_MAX	: unsigned(15 downto 0) := x"0000" + 5208;
+		signal divide_bit			: unsigned(15 downto 0) := (others => '0');
 		
-		signal tx_cnt_block	: unsigned(11 downto 0) := (others => '1');
-		signal tx_cnt_bs		: unsigned(11 downto 0) := (others => '0');
-		signal tx_cnt_byte	: unsigned(3 downto 0) := (others => '0');
-		signal tx_cnt_bit		: unsigned(3 downto 0) := (others => '0');
-		signal tx_cnt_mid		: unsigned(3 downto 0) := (others => '0');
-		signal tx_cnt_pulse	: unsigned(7 downto 0) := (others => '0');
+		signal tx_cnt_block		: unsigned(11 downto 0) := (others => '1');
+		signal tx_cnt_bs			: unsigned(11 downto 0) := (others => '0');
+		signal tx_cnt_byte		: unsigned(3 downto 0) := (others => '0');
+		signal tx_cnt_bit			: unsigned(3 downto 0) := (others => '0');
+		signal tx_cnt_mid			: unsigned(3 downto 0) := (others => '0');
+		signal tx_cnt_pulse		: unsigned(7 downto 0) := (others => '0');
 		
-		signal cnt_txadr		: unsigned(7 downto 0) := (others => '0');
+		signal cnt_txadr			: unsigned(7 downto 0) := (others => '0');
 		
-		signal cnt_cut_head	: unsigned(7 downto 0) := (others => '0');
+		signal cnt_cut_head		: unsigned(7 downto 0) := (others => '0');
 		
-		signal dl_adr			: std_logic_vector(24 downto 0);
-		signal dl_data			: std_logic_vector(7 downto 0);
-		signal dl_readbyte	: std_logic := '0';
-		signal dl_readblock	: std_logic := '0';
+		signal dl_adr				: std_logic_vector(24 downto 0);
+		signal dl_data				: std_logic_vector(7 downto 0);
+		signal dl_readbyte		: std_logic := '0';
+		signal dl_readblock		: std_logic := '0';
 		
-		signal tmp_color		: std_logic_vector(7 downto 0);
-		signal tmp_adr			: std_logic_vector(6 downto 0);
-		signal tmp_data		: std_logic_vector(7 downto 0);
+		signal tmp_color			: std_logic_vector(7 downto 0);
+		signal tmp_adr				: std_logic_vector(6 downto 0);
+		signal tmp_data			: std_logic_vector(7 downto 0);
 		
-		signal buff_adr		: std_logic_vector(6 downto 0) := (others => '1');
-		signal buff_di			: std_logic_vector(7 downto 0);
-		signal buff_do			: std_logic_vector(7 downto 0);
-		signal buff_we_n		: std_logic := '0';
+		signal buff_adr			: std_logic_vector(6 downto 0) := (others => '1');
+		signal buff_di				: std_logic_vector(7 downto 0);
+		signal buff_do				: std_logic_vector(7 downto 0);
+		signal buff_we_n			: std_logic := '0';
 		
-		signal block_nr		: unsigned(7 downto 0) := (others => '1');
-		signal checksum		: unsigned(7 downto 0) := (others => '0');
+		signal block_nr			: unsigned(7 downto 0) := (others => '1');
+		signal checksum			: unsigned(7 downto 0) := (others => '0');
+		
+		signal DIVIDER				: unsigned(15 downto 0);
 	
 begin
 	process
@@ -90,6 +92,24 @@ begin
 		
 		-- reset buffer we_n
 		buff_we_n	<= '1';
+		
+		-- turbo setting
+		if		turbo = b"00" then
+			DIVIDER <= C_BIT_DIVIDE_MAX;
+		elsif	turbo = b"01" then
+			DIVIDER <= b"0" & C_BIT_DIVIDE_MAX(15 downto 1);
+		elsif	turbo = b"10" then
+			DIVIDER <= b"00" & C_BIT_DIVIDE_MAX(15 downto 2) + 100;
+		elsif	turbo = b"11" then
+			--DIVIDER <= b"000" & C_BIT_DIVIDE_MAX(15 downto 3) + 260;
+			--DIVIDER <= b"000" & C_BIT_DIVIDE_MAX(15 downto 3) + 280;
+			--DIVIDER <= b"000" & C_BIT_DIVIDE_MAX(15 downto 3) + 200;
+			--DIVIDER <= b"000" & C_BIT_DIVIDE_MAX(15 downto 3) + 160; -- fehlt nur block 01
+			--DIVIDER <= b"000" & C_BIT_DIVIDE_MAX(15 downto 3) + 140; -- fehlt nur block 01
+			--DIVIDER <= b"000" & C_BIT_DIVIDE_MAX(15 downto 3) + 130; -- fehlt nur block 01
+			--DIVIDER <= b"000" & C_BIT_DIVIDE_MAX(15 downto 3) + 120; -- fehlt nur block 01
+			DIVIDER <= b"000" & C_BIT_DIVIDE_MAX(15 downto 3) + 150; -- fehlt nur block 01
+		end if;
 		
 		-- send pulse
 		if tx_cnt_pulse > 0 then
@@ -104,11 +124,17 @@ begin
 			if divide_bit > 0 then
 				divide_bit <= divide_bit - 1;
 			else
-				divide_bit <= to_unsigned(BIT_DIVIDE_MAX,17);
+				divide_bit <= DIVIDER;
 				tx_cnt_bit <= tx_cnt_bit - 1;
 				if tx_cnt_bit = 1 or tx_cnt_bit = tx_cnt_mid then
 					-- send pulse
-					tx_cnt_pulse <= x"64";	--100, ca. 2us
+					--tx_cnt_pulse <= x"64";	--100, ca. 2us
+					case turbo is
+						when b"00" => tx_cnt_pulse <= x"64";
+						when b"01" => tx_cnt_pulse <= x"32";
+						when b"10" => tx_cnt_pulse <= x"19";
+						when b"11" => tx_cnt_pulse <= x"0c";
+					end case;
 				end if;
 			end if;
 		end if;
@@ -116,7 +142,7 @@ begin
 		-- send byte to kc
 		if tx_cnt_bit = 0 then
 			if tx_cnt_byte > 0 then
-				divide_bit <= to_unsigned(BIT_DIVIDE_MAX,17);
+				divide_bit <= DIVIDER;
 				tx_cnt_byte <= tx_cnt_byte - 1;
 				if tx_cnt_byte = 9 then
 					-- Vorton
@@ -141,11 +167,17 @@ begin
 			if divide_bit > 0 then
 				divide_bit <= divide_bit - 1;
 			else
-				divide_bit <= to_unsigned(BIT_DIVIDE_MAX,17);
+				divide_bit <= DIVIDER;
 				tx_cnt_bs <= tx_cnt_bs - 1;
 				if tx_cnt_bs < 1396 and tx_cnt_bs(1 downto 0) = b"01" then
 					-- send pulse
-					tx_cnt_pulse <= x"64";	--100, ca. 2us
+					--tx_cnt_pulse <= x"64";	--100, ca. 2us
+					case turbo is
+						when b"00" => tx_cnt_pulse <= x"64";
+						when b"01" => tx_cnt_pulse <= x"32";
+						when b"10" => tx_cnt_pulse <= x"19";
+						when b"11" => tx_cnt_pulse <= x"0c";
+					end case;
 					-- dont divide last pulse
 					if tx_cnt_bs = b"0000000000000001" then
 						tx_cnt_bs <= (others => '0');
