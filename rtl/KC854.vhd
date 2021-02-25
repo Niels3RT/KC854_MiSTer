@@ -57,9 +57,20 @@ entity kc854 is
 		VGA_G				: out std_logic_vector(7 downto 0);
 		VGA_B				: out std_logic_vector(7 downto 0);
 		
+		clk_audio		: in  std_logic;		-- 24.576 MHz
+		AUDIO_L			: out std_logic_vector(15 downto 0);
+		AUDIO_R			: out std_logic_vector(15 downto 0);
+		--AUDIO_S			: out std_logic;
+		--AUDIO_MIX		: out std_logic_vector(1 downto 0);
+		
+		audioEn_n		: in  std_logic;
+		tapeEn			: in  std_logic;
+		
 		LED_USER			: out std_logic;
 		LED_POWER		: out std_logic_vector(1 downto 0);
 		LED_DISK			: out std_logic_vector(1 downto 0);
+		
+		USER_OUT			: out std_logic_vector(6 downto 0);
 		
 		hps_status		: in  std_logic_vector(31 downto 0);
 		ioctl_download	: in  std_logic;
@@ -161,6 +172,10 @@ architecture struct of kc854 is
 	
 	--KC LEDs MiSTer temp
 	signal LEDR				: std_logic_vector(15 downto 0) := (others => '0');
+	
+	-- TEMP audio_l debug
+	signal AUDIO_L_DBG	: std_logic_vector(15 downto 0);
+	signal AUDIO_R_DBG	: std_logic_vector(15 downto 0);
 
 begin
 	-- turn on video output
@@ -168,6 +183,9 @@ begin
 
 	-- reset
 	cpuReset_n <= '0' when resetDelay /= 0 else '1';
+	
+	USER_OUT(1 downto 0) <= (others => '1');
+	USER_OUT(6 downto 2) <= (others => '1');
 
 	reset : process
 	begin
@@ -341,6 +359,30 @@ begin
 			bOut    => pioBOut,
 			bRdy    => pioBRdy,
 			bStb    => pioBStb
+		);
+	
+	AUDIO_L <= AUDIO_L_DBG;
+	AUDIO_R <= AUDIO_R_DBG;
+	
+--	USER_OUT(3 downto 2) <= ctcZcTo(1 downto 0);
+--	USER_OUT(4) <= AUDIO_L_DBG(15);
+--	USER_OUT(5) <= AUDIO_R_DBG(15);
+	
+	-- audio output
+	audio_out : entity work.audio
+		port map (
+			clk			=> clk_audio,
+			reset_n		=> cpuReset_n,
+			--AUDIO_L		=> AUDIO_L,
+			AUDIO_L		=> AUDIO_L_DBG,
+			AUDIO_R		=> AUDIO_R_DBG,
+			--AUDIO_S		=> AUDIO_S,
+			--AUDIO_MIX	=> AUDIO_MIX,
+			audioEn_n	=> audioEn_n,
+			tapeEn		=> tapeEn,
+			tape_out		=> pioAStb,
+			pioB			=> pioBOut,
+			ctcTcTo		=> ctcZcTo(1 downto 0)
 		);
 	
 	-- keyboard

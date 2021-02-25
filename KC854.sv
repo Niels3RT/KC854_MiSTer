@@ -172,7 +172,7 @@ module emu
 ///////// Default values for ports not used in this core /////////
 
 assign ADC_BUS  = 'Z;
-assign USER_OUT = '1;
+//assign USER_OUT = '1;
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
 assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
 assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
@@ -182,10 +182,10 @@ assign VGA_SL = 0;
 assign VGA_F1 = 0;
 assign VGA_SCALER = 0;
 
-assign AUDIO_S = 0;
-assign AUDIO_L = 0;
-assign AUDIO_R = 0;
-assign AUDIO_MIX = 0;
+//assign AUDIO_S = 0;
+//assign AUDIO_L = 0;
+//assign AUDIO_R = 0;
+//assign AUDIO_MIX = 0;
 
 //assign LED_DISK = 0;
 //assign LED_POWER = 0;
@@ -199,6 +199,10 @@ wire [1:0] ar    = status[2:1];
 assign VIDEO_ARX = (!ar) ? 12'd4 : (ar - 1'd1);
 assign VIDEO_ARY = (!ar) ? 12'd3 : 12'd0;
 wire [1:0] turbo = status[4:3];
+wire audioEn_n   = status[5];
+wire tapeEn      = status[6];
+assign AUDIO_MIX = status[8:7];
+assign AUDIO_S   = 0;  // unsigned audio data
 
 `include "build_id.v" 
 localparam CONF_STR = {
@@ -209,6 +213,10 @@ localparam CONF_STR = {
 	"O34,CPU Turbo,1x,2x,4x,8x;",
 	"-;",
 	"F,TAP,Load Tape;",
+	"-;",
+	"O5,Audio,ON,OFF;",
+	"O6,Tape Noise,OFF,ON;",
+	"O78,Stereo Mix,None,25%,50%,100%;",
 	"-;",
 	"T0,Reset;",
 	"R0,Reset and close OSD;",
@@ -300,9 +308,18 @@ kc854 kc854
 	.VGA_G(VGA_G),
 	.VGA_B(VGA_B),
 	
+	.clk_audio(CLK_AUDIO),
+	.AUDIO_L(AUDIO_L),
+	.AUDIO_R(AUDIO_R),
+	
+	.audioEn_n(audioEn_n),
+	.tapeEn(tapeEn),
+	
 	.LED_USER(LED_USER),
 	.LED_POWER(LED_POWER),
 	.LED_DISK(LED_DISK),
+	
+	.USER_OUT(USER_OUT),
 	
 	.hps_status(status),
 	.ioctl_download(ioctl_download),
