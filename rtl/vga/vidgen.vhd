@@ -56,7 +56,10 @@ entity vidgen is
 			vidScanline	: in  std_logic;
 
 			vidNextLine	: out std_logic;
-			vidLine		: out std_logic_vector(7 downto 0)
+			vidLine		: out std_logic_vector(7 downto 0);
+			
+			bi_n			: out std_logic;
+			h4				: out std_logic
 			);
 end;
 
@@ -130,13 +133,17 @@ begin
 
 		-- blank
 		vgaHBlank <= not(H_BLANK_ACTIVE);
+		h4        <= '0';
 		if (countH >= H_DISP) then 
 			vgaHBlank <= H_BLANK_ACTIVE;
+			h4        <= '1';
 		end if;
 
 		vgaVBlank <= not(V_BLANK_ACTIVE);
+		bi_n      <= '0';
 		if (countV >= V_DISP) then 
 			vgaVBlank <= V_BLANK_ACTIVE;
+			bi_n      <= '1';
 		end if;
 	end process;
  

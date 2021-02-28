@@ -42,6 +42,7 @@ entity kc854 is
 		reset_sig		: in  std_logic;
 		
 		ps2_key			: in std_logic_vector(10 downto 0);
+		joystick_0		: in  std_logic_vector(31 downto 0);
 		turbo				: in std_logic_vector(1 downto 0);
 		
 		scandouble		: in  std_logic;
@@ -83,7 +84,7 @@ entity kc854 is
 end kc854;
 
 architecture struct of kc854 is
-	constant NUMINTS		: integer := 4 + 6 + 2 + 4; -- (CTC + SIO + PIO + CTC)
+	constant NUMINTS		: integer := 2 + 4 + 6 + 2 + 4; -- (M008 + CTC + SIO + PIO + CTC)
 
 	signal cpuReset_n		: std_logic;
 	signal cpuAddr			: std_logic_vector(15 downto 0);
@@ -114,6 +115,8 @@ architecture struct of kc854 is
 	signal vidBusy			: std_logic;
 	signal vidRead			: std_logic;
 	signal vidHires		: std_logic;
+	signal bi_n				: std_logic;
+	signal h4				: std_logic;
 
 	signal ioSel			: boolean;
     
@@ -130,6 +133,17 @@ architecture struct of kc854 is
 	signal pioBStb			: std_logic;
 
 	signal pioDataOut		: std_logic_vector(7 downto 0);
+	signal pio008DataOut	: std_logic_vector(7 downto 0);
+	
+	signal pio008CS_n		: std_logic;
+	signal pio008AIn		: std_logic_vector(7 downto 0);
+	signal pio008AOut		: std_logic_vector(7 downto 0);
+	signal pio008ARdy		: std_logic;
+	signal pio008AStb		: std_logic;
+	signal pio008BIn		: std_logic_vector(7 downto 0);
+	signal pio008BOut		: std_logic_vector(7 downto 0);
+	signal pio008BRdy		: std_logic;
+	signal pio008BStb		: std_logic;
 
 	signal ctcCS_n			: std_logic;
 	signal ctcH4Clk		: std_logic;
@@ -185,7 +199,7 @@ begin
 	cpuReset_n <= '0' when resetDelay /= 0 else '1';
 	
 	USER_OUT(1 downto 0) <= (others => '1');
-	USER_OUT(6 downto 2) <= (others => '1');
+	USER_OUT(6 downto 6) <= (others => '1');
 
 	reset : process
 	begin
@@ -256,7 +270,10 @@ begin
 
 			vidBlank  => not cpuReset_n,
 			
-			vidScanline => '1'
+			vidScanline => '1',
+			
+			bi_n      => bi_n,
+			h4        => h4
 		);
 
 	-- memory controller
@@ -297,9 +314,10 @@ begin
 
 	-- CPU data-in multiplexer
 	cpuDataIn <= 
-			ctcDataOut when ctcCS_n='0' or intAckPeriph(3 downto 0) /= "0000" else
-			pioDataOut when pioCS_n='0' or intAckPeriph(5 downto 4) /= "00"   else
-			m003DataOut when m003Sel='1' or intAckPeriph(15 downto 6) /= "0000000000" else
+			ctcDataOut		when ctcCS_n = '0'		or intAckPeriph(3 downto 0)   /= "0000" else
+			pioDataOut		when pioCS_n = '0'		or intAckPeriph(5 downto 4)   /= "00"   else
+			pio008DataOut	when pio008CS_n = '0'	or intAckPeriph(17 downto 16) /= "00"   else
+			m003DataOut		when m003Sel = '1'		or intAckPeriph(15 downto 6)  /= "0000000000" else
 			memDataOut;
 
 	-- T80 CPU
@@ -361,14 +379,74 @@ begin
 			bStb    => pioBStb
 		);
 	
-	AUDIO_L <= AUDIO_L_DBG;
-	AUDIO_R <= AUDIO_R_DBG;
+	-- M008/Joystick PIO: 90H-97BH reserved for M008, here only 90h is used
+	pio008CS_n <= '0' when cpuAddr(7 downto 2) = "100100" and ioSel else '1';
+	--pio008CS_n <= '0' when cpuAddr(7 downto 3) = "10010" and ioSel else '1';
+	--pio008CS_n <= '0' when cpuAddr(7 downto 3) = "10010" else '1';
+	pio008BIn  <= (others => '1');
+	LED_USER  <= not joystick_0(1);
+	--USER_OUT(2) <= not intPeriph(16);
+	--USER_OUT(3) <= not intAckPeriph(16);
+--	USER_OUT(3) <= cpuRD_n;
+--	USER_OUT(4) <= cpuAddr(1);
+--	USER_OUT(2) <= cpuInt_n;
+--	USER_OUT(2) <= pio008DataOut(1);
+--	USER_OUT(3) <= pio008DataOut(0);
+--	USER_OUT(2) <= cpuAddr(0);
+--	USER_OUT(3) <= cpuAddr(1);
+--	USER_OUT(4) <= cpuRD_n;
+--	USER_OUT(3) <= cpuDataIn(0);
+--	USER_OUT(4) <= pio008DataOut(0);
+--	--USER_OUT(4) <= cpuRD_n;
+	--USER_OUT(5) <= pio008CS_n;
+	--USER_OUT(4) <= bi_n;
+	--USER_OUT(5) <= h4;
+--	USER_OUT(2) <= intAckPeriph(0);
+--	USER_OUT(3) <= intAckPeriph(1);
+--	USER_OUT(4) <= intAckPeriph(2);
+	USER_OUT(2) <= cpuInt_n;
+	--USER_OUT(3) <= cpuRD_n;
+	USER_OUT(3) <= cpuRD_n when ctcCS_n = '0' or pio008CS_n = '0' else '1';
+	--USER_OUT(4) <= intAckPeriph(3);
+	--USER_OUT(5) <= ctcCS_n;
+	USER_OUT(4) <= pio008CS_n when cpuAddr(7 downto 2) = "100100" else '1';
+	USER_OUT(5) <= ctcCS_n when cpuAddr(1 downto 0) = b"11" else '1';
+
+	pio_M008 : entity work.pio
+		port map (
+			clk     => cpuclk,
+			res_n   => cpuReset_n,
+			dIn     => cpuDataOut,
+			dOut    => pio008DataOut,
+			baSel   => cpuAddr(0),
+			cdSel   => cpuAddr(1),
+			cs_n    => pio008CS_n,
+			m1_n    => cpuM1_n and cpuReset_n,
+			iorq_n  => cpuIorq_n,
+			rd_n    => cpuRD_n,
+			intAck  => intAckPeriph(17 downto 16),
+			int     => intPeriph(17 downto 16),
+			--aIn     => pio008AIn,
+			-- fire, fire2, right, left, down, up
+			aIn     => b"11" & not joystick_0(4) & not joystick_0(5) & not joystick_0(0) & not joystick_0(1) & not joystick_0(2) & not joystick_0(3),
+			aOut    => pio008AOut,
+			aRdy    => pio008ARdy,
+			--aStb    => pio008AStb,
+			aStb    => ctcBIClk,
+			bIn     => pio008BIn,
+			bOut    => pio008BOut,
+			bRdy    => pio008BRdy,
+			--bStb    => pio008BStb
+			bStb    => ctcBIClk
+		);
 	
 --	USER_OUT(3 downto 2) <= ctcZcTo(1 downto 0);
 --	USER_OUT(4) <= AUDIO_L_DBG(15);
 --	USER_OUT(5) <= AUDIO_R_DBG(15);
 	
 	-- audio output
+	AUDIO_L <= AUDIO_L_DBG;
+	AUDIO_R <= AUDIO_R_DBG;
 	audio_out : entity work.audio
 		port map (
 			clk			=> clk_audio,
@@ -404,7 +482,7 @@ begin
 		if rising_edge(cpuclk) then
 			old_stb <= ps2_key(10);
 			if old_stb /= ps2_key(10) then
-				LED_USER  <= ps2_key(9);
+				--LED_USER  <= ps2_key(9);
 				ps2_state <= ps2_key(9);		-- 1 key down, 0 not down
 				ps2_code  <= ps2_key(7 downto 0);
 				ps2_rcvd  <= '1';
@@ -469,7 +547,6 @@ begin
 		);
 
 	m003TestUart <= '1' when (not ctcCS_n='0') else '0';
-
 	m003TestRW <= (cpuRD_n and cpuWR_n);
 
 	uart1 : entity work.uart

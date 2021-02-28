@@ -227,6 +227,7 @@ wire forced_scandoubler;
 wire  [1:0] buttons;
 wire [31:0] status;
 wire [10:0] ps2_key;
+wire [31:0] joystick_0;
 
 wire        ioctl_wr;
 wire [24:0] ioctl_addr;
@@ -250,6 +251,7 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.status_menumask({status[5]}),
 	
 	.ps2_key(ps2_key),
+	.joystick_0(joystick_0),
 	
 	.ioctl_download(ioctl_download),
 	.ioctl_index(ioctl_index),
@@ -292,6 +294,7 @@ kc854 kc854
 	.reset_sig(reset),
 	
 	.ps2_key(ps2_key),
+	.joystick_0(joystick_0),
 	
 	.turbo(turbo),
 

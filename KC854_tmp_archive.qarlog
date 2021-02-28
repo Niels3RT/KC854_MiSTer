@@ -1,0 +1,109 @@
+Quartus Prime Archive log --	D:/Mr/KC87/KC854_MiSTer/KC854_tmp_archive.qarlog
+
+Archive:	D:/Mr/KC87/KC854_MiSTer/KC854_tmp_archive.qar
+Date:		Fri Feb 26 09:11:37 2021
+Quartus Prime		17.0.0 Build 595 04/25/2017 SJ Lite Edition
+
+	=========== Files Selected: ===========
+D:/Mr/KC87/KC854_MiSTer/KC854.qpf
+D:/Mr/KC87/KC854_MiSTer/KC854.sdc
+D:/Mr/KC87/KC854_MiSTer/KC854.sv
+D:/Mr/KC87/KC854_MiSTer/assignment_defaults.qdf
+D:/Mr/KC87/KC854_MiSTer/build_id.v
+D:/Mr/KC87/KC854_MiSTer/files.qip
+D:/Mr/KC87/KC854_MiSTer/jtag.cdf
+D:/Mr/KC87/KC854_MiSTer/kc854.qsf
+D:/Mr/KC87/KC854_MiSTer/roms/basic_c.vhd
+D:/Mr/KC87/KC854_MiSTer/roms/caos42_c.vhd
+D:/Mr/KC87/KC854_MiSTer/roms/caos42_e.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/KC854.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/dualsram.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/memcontrol.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/audio.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/ctc.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/ctc_channel.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/intcontroller.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/keyboard.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/m003.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/pio.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/pio_port.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/ps2if.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/sio.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/sio_channel.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/sio_fifo.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/tape.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/periph/uart.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/pll.cmp
+D:/Mr/KC87/KC854_MiSTer/rtl/pll.qip
+D:/Mr/KC87/KC854_MiSTer/rtl/pll.v
+D:/Mr/KC87/KC854_MiSTer/rtl/pll/pll_0002.qip
+D:/Mr/KC87/KC854_MiSTer/rtl/pll/pll_0002.v
+D:/Mr/KC87/KC854_MiSTer/rtl/sram.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/sysclock.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/t80/T80.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/t80/T80_ALU.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/t80/T80_MCode.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/t80/T80_Pack.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/t80/T80_Reg.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/t80/T80se.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/vga/video.vhd
+D:/Mr/KC87/KC854_MiSTer/rtl/vga/vidgen.vhd
+D:/Mr/KC87/KC854_MiSTer/sys/alsa.sv
+D:/Mr/KC87/KC854_MiSTer/sys/arcade_video.v
+D:/Mr/KC87/KC854_MiSTer/sys/ascal.vhd
+D:/Mr/KC87/KC854_MiSTer/sys/audio_out.v
+D:/Mr/KC87/KC854_MiSTer/sys/build_id.tcl
+D:/Mr/KC87/KC854_MiSTer/sys/ddr_svc.sv
+D:/Mr/KC87/KC854_MiSTer/sys/f2sdram_safe_terminator.sv
+D:/Mr/KC87/KC854_MiSTer/sys/gamma_corr.sv
+D:/Mr/KC87/KC854_MiSTer/sys/hdmi_config.sv
+D:/Mr/KC87/KC854_MiSTer/sys/hps_io.v
+D:/Mr/KC87/KC854_MiSTer/sys/hq2x.sv
+D:/Mr/KC87/KC854_MiSTer/sys/i2c.v
+D:/Mr/KC87/KC854_MiSTer/sys/i2s.v
+D:/Mr/KC87/KC854_MiSTer/sys/iir_filter.v
+D:/Mr/KC87/KC854_MiSTer/sys/ltc2308.sv
+D:/Mr/KC87/KC854_MiSTer/sys/math.sv
+D:/Mr/KC87/KC854_MiSTer/sys/mcp23009.sv
+D:/Mr/KC87/KC854_MiSTer/sys/mt32pi.sv
+D:/Mr/KC87/KC854_MiSTer/sys/osd.v
+D:/Mr/KC87/KC854_MiSTer/sys/pll_audio.qip
+D:/Mr/KC87/KC854_MiSTer/sys/pll_audio.v
+D:/Mr/KC87/KC854_MiSTer/sys/pll_audio/pll_audio_0002.qip
+D:/Mr/KC87/KC854_MiSTer/sys/pll_audio/pll_audio_0002.v
+D:/Mr/KC87/KC854_MiSTer/sys/pll_cfg.qip
+D:/Mr/KC87/KC854_MiSTer/sys/pll_cfg.v
+D:/Mr/KC87/KC854_MiSTer/sys/pll_cfg/altera_pll_reconfig_core.v
+D:/Mr/KC87/KC854_MiSTer/sys/pll_cfg/altera_pll_reconfig_top.v
+D:/Mr/KC87/KC854_MiSTer/sys/pll_hdmi.qip
+D:/Mr/KC87/KC854_MiSTer/sys/pll_hdmi.v
+D:/Mr/KC87/KC854_MiSTer/sys/pll_hdmi/pll_hdmi_0002.qip
+D:/Mr/KC87/KC854_MiSTer/sys/pll_hdmi/pll_hdmi_0002.v
+D:/Mr/KC87/KC854_MiSTer/sys/pll_hdmi_adj.vhd
+D:/Mr/KC87/KC854_MiSTer/sys/pll_q17.qip
+D:/Mr/KC87/KC854_MiSTer/sys/scandoubler.v
+D:/Mr/KC87/KC854_MiSTer/sys/scanlines.v
+D:/Mr/KC87/KC854_MiSTer/sys/sd_card.sv
+D:/Mr/KC87/KC854_MiSTer/sys/sigma_delta_dac.v
+D:/Mr/KC87/KC854_MiSTer/sys/spdif.v
+D:/Mr/KC87/KC854_MiSTer/sys/sys.qip
+D:/Mr/KC87/KC854_MiSTer/sys/sys.tcl
+D:/Mr/KC87/KC854_MiSTer/sys/sys_analog.tcl
+D:/Mr/KC87/KC854_MiSTer/sys/sys_dual_sdram.tcl
+D:/Mr/KC87/KC854_MiSTer/sys/sys_top.sdc
+D:/Mr/KC87/KC854_MiSTer/sys/sys_top.v
+D:/Mr/KC87/KC854_MiSTer/sys/sysmem.sv
+D:/Mr/KC87/KC854_MiSTer/sys/vga_out.sv
+D:/Mr/KC87/KC854_MiSTer/sys/video_cleaner.sv
+D:/Mr/KC87/KC854_MiSTer/sys/video_freak.sv
+D:/Mr/KC87/KC854_MiSTer/sys/video_mixer.sv
+	======= Total: 92 files to archive =======
+
+	================ Status: ===============
+All files archived successfully.
+
+
+******* Archived project restoration attempt on Fri Feb 26 09:11:40 2021
+Source archive file:	D:/Mr/KC87/KC854_MiSTer/KC854_tmp_archive.qar
+Archive was extracted into	D:/Mr/KC87/PolyPlay_MiSTer/
+		 - successfully.

@@ -58,7 +58,7 @@ architecture rtl of pio_port is
     
     signal mode     : std_logic_vector(1 downto 0) := "01";
     signal irqCtrl  : std_logic_vector(2 downto 0) := (others => '0');
-    signal irqMask  : std_logic_vector(7 downto 0) := (others => '0');
+    signal irqMask  : std_logic_vector(7 downto 0) := (others => '1');
     signal irqVect  : std_logic_vector(6 downto 0) := (others => '0');
     signal portMask : std_logic_vector(7 downto 0) := (others => '1'); -- 1=input / 0=output
     signal irqCond  : std_logic_vector(1 downto 0) := (others => '0');
@@ -123,38 +123,35 @@ begin
             if (stbDebounce(stbDebounce'left downto stbDebounce'left-1)="01") then
                 int <= '1';
             end if;
-        --elsif (mode="11" and irqCtrl(2)='1' and nIrqMask /= "00000000") then -- mode 3 + irq enabled
-		  elsif (mode(0)='1' and irqCtrl(2)='1' and nIrqMask /= "00000000") then -- mode 3 or 1 + irq enabled
-				if (mode(1) = '1') or (pStb = '0') then	-- mode 3 stb don't matter, mode 1 only when stb is low
-					-- check for int-condition
-					irqCond(0) <= '0';
-				 
-					case irqCtrl(1 downto 0) is
-						 when "00" =>  -- or + low
-							  if ((pIn and nIrqMask) /= nIrqMask) then
-									irqCond(0) <= '1';
-							  end if;
-						 when "01" =>  -- or + high
-							  if ((pIn and nIrqMask) /= "00000000") then
-									irqCond(0) <= '1';
-							  end if;
-						 when "10" =>  -- and + low
-							  if ((pIn and nIrqMask) = "00000000") then
-									irqCond(0) <= '1';
-							  end if;
-						 when "11" =>  -- and + high
-							  if ((pIn and nIrqMask) = nIrqMask) then
-									irqCond(0) <= '1';
-							  end if;
-						 when others => null;
-					end case;
-					
-					irqCond(1) <= irqCond(0);
+        elsif (mode="11" and irqCtrl(2)='1' and nIrqMask /= "00000000") then -- mode 3 + irq enabled
+            -- check for int-condition
+            irqCond(0) <= '0';
+          
+            case irqCtrl(1 downto 0) is
+                when "00" =>  -- or + low
+                    if ((pIn and nIrqMask) /= nIrqMask) then
+                        irqCond(0) <= '1';
+                    end if;
+                when "01" =>  -- or + high
+                    if ((pIn and nIrqMask) /= "00000000") then
+                        irqCond(0) <= '1';
+                    end if;
+                when "10" =>  -- and + low
+                    if ((pIn and nIrqMask) = "00000000") then
+                        irqCond(0) <= '1';
+                    end if;
+                when "11" =>  -- and + high
+                    if ((pIn and nIrqMask) = nIrqMask) then
+                        irqCond(0) <= '1';
+                    end if;
+                when others => null;
+            end case;
+            
+            irqCond(1) <= irqCond(0);
 
-					if (irqCond="01") then
-						 int <= '1';
-					end if;
-				end if;
+            if (irqCond="01") then
+                int <= '1';
+            end if;
         end if;
     end process;
     
@@ -166,7 +163,6 @@ begin
         if (res_n='0') then
             mode <= "01";
             portMask <= (others => '1');
-				irqMask  <= (others => '0');
             nextState <= default;
         elsif (intAck='1') then
 --            dOut <= irqVect & '0';

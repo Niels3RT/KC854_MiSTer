@@ -56,7 +56,10 @@ entity video is
 
 			vidBlank			: in  std_logic;
 
-			vidScanline		: in  std_logic
+			vidScanline		: in  std_logic;
+			
+			bi_n				: out std_logic;
+			h4					: out std_logic
 			);
 end video;
 
@@ -64,31 +67,36 @@ architecture rtl of video is
     constant KC_VIDLINES : integer := 312;
 
     type   ram_type is ( ramAddr, ramAddrDelay, ramRead );
-    signal ramState         : ram_type := ramAddr;
+    signal ramState			: ram_type := ramAddr;
 
-    signal lineAddr         : integer range 0 to 41 := 41;
-    signal row              : std_logic_vector(7 downto 0) := (others => '0');
-    signal lineAddrSLV      : std_logic_vector(5 downto 0);
+    signal lineAddr			: integer range 0 to 41 := 41;
+    signal row					: std_logic_vector(7 downto 0) := (others => '0');
+    signal lineAddrSLV		: std_logic_vector(5 downto 0);
     
-    signal vgaAddr          : std_logic_vector(5 downto 0);
-    signal vgaData          : std_logic_vector(15 downto 0);
-	 signal vidNextLine      : std_logic;
-	 signal vidNextLine_a    : std_logic;
-	 signal vidNextLine_b    : std_logic;
+    signal vgaAddr			: std_logic_vector(5 downto 0);
+    signal vgaData			: std_logic_vector(15 downto 0);
+	 signal vidNextLine		: std_logic;
+	 signal vidNextLine_a	: std_logic;
+	 signal vidNextLine_b	: std_logic;
     
-    signal vidBlinkDelay    : std_logic_vector(1 downto 0) := "00";
-    signal blinkDiv         : std_logic := '0';
-    signal blinkDivEn       : std_logic;
+    signal vidBlinkDelay	: std_logic_vector(1 downto 0) := "00";
+    signal blinkDiv			: std_logic := '0';
+    signal blinkDivEn		: std_logic;
     
-    signal vidLine          : std_logic_vector(8 downto 0);
-	 signal vidLine_a        : std_logic_vector(8 downto 0);
-	 signal vidLine_b        : std_logic_vector(8 downto 0);
+    signal vidLine			: std_logic_vector(8 downto 0);
+	 signal vidLine_a			: std_logic_vector(8 downto 0);
+	 signal vidLine_b			: std_logic_vector(8 downto 0);
+	 
+	 signal bi_n_a				: std_logic;
+	 signal bi_n_b				: std_logic;
+	 signal h4_a				: std_logic;
+	 signal h4_b				: std_logic;
     
-    signal vDisplay         : std_logic;
+    signal vDisplay			: std_logic;
     
-    signal kcVidLine        : integer range 0 to KC_VIDLINES-1 := 0;
-    signal kcVidLineSLV     : std_logic_vector(8 downto 0);
-    signal vgaBlink         : std_logic;
+    signal kcVidLine			: integer range 0 to KC_VIDLINES-1 := 0;
+    signal kcVidLineSLV		: std_logic_vector(8 downto 0);
+    signal vgaBlink			: std_logic;
 
 begin
 
@@ -102,9 +110,13 @@ begin
 
 		-- Signale aus der anderen Clockdomain einsynchronisieren...
 		vidNextLine_b <= vidNextLine_a;
-		vidNextLine <= vidNextLine_b;
+		vidNextLine   <= vidNextLine_b;
 		vidLine_b <= vidLine_a;
-		vidLine <= vidLine_b;
+		vidLine   <= vidLine_b;
+		bi_n_b <= bi_n_a;
+		bi_n   <= bi_n_b;
+		h4_b   <= h4_a;
+		h4     <= h4_b;
 
 		if (vidNextLine = '1') then -- naechste Zeile starten?
 			row      <= vidLine(7 downto 0);
@@ -232,7 +244,10 @@ begin
         
 		  vidNextLine => vidNextLine_a,
         
-		  vidLine   => vidLine_a(7 downto 0)
+		  vidLine   => vidLine_a(7 downto 0),
+		  
+		  bi_n      => bi_n_a,
+		  h4			=> h4_a
     );
     
 end;

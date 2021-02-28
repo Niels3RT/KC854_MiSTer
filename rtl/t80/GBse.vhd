@@ -72,10 +72,9 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 use work.T80_Pack.all;
 
-entity T80se is
+entity GBse is
 	generic(
-		Mode : integer := 0;    -- 0 => Z80, 1 => Fast Z80, 2 => 8080, 3 => GB
-		T2Write : integer := 0;  -- 0 => WR_n active in T3, /=0 => WR_n active in T2
+		T2Write : integer := 1;  -- 0 => WR_n active in T3, /=0 => WR_n active in T2
 		IOWait : integer := 1   -- 0 => Single cycle I/O, 1 => Std I/O cycle
 	);
 	port(
@@ -94,13 +93,14 @@ entity T80se is
 		RFSH_n          : out std_logic;
 		HALT_n          : out std_logic;
 		BUSAK_n         : out std_logic;
+		STOP            : out std_logic;
 		A               : out std_logic_vector(15 downto 0);
 		DI              : in  std_logic_vector(7 downto 0);
 		DO              : out std_logic_vector(7 downto 0)
 	);
-end T80se;
+end GBse;
 
-architecture rtl of T80se is
+architecture rtl of GBse is
 
 	signal IntCycle_n   : std_logic;
 	signal NoRead       : std_logic;
@@ -114,8 +114,17 @@ begin
 
 	u0 : T80
 		generic map(
-			Mode => Mode,
-			IOWait => IOWait)
+			Mode      => 3,
+			IOWait    => IOWait,
+			Flag_S    => 0,
+			Flag_P    => 0,
+			Flag_X    => 0,
+			Flag_Y    => 0,
+			Flag_C    => 4,
+			Flag_H    => 5,
+			Flag_N    => 6,
+			Flag_Z    => 7
+		)
 		port map(
 			CEN        => CLKEN,
 			M1_n       => M1_n,
@@ -124,6 +133,7 @@ begin
 			Write      => Write,
 			RFSH_n     => RFSH_n,
 			HALT_n     => HALT_n,
+			Stop       => STOP,
 			WAIT_n     => Wait_n,
 			INT_n      => INT_n,
 			NMI_n      => NMI_n,
@@ -157,10 +167,13 @@ begin
 					if TState = "001" or (TState = "010" and Wait_n = '0') then
 						RD_n <= not IntCycle_n;
 						MREQ_n <= not IntCycle_n;
-						IORQ_n <= IntCycle_n;
 					end if;
 					if TState = "011" then
 						MREQ_n <= '0';
+					end if;
+				elsif MCycle = "011" and IntCycle_n = '0' then
+					if TState = "001" then
+						IORQ_n <= '0'; -- Acknowledge IRQ
 					end if;
 				else
 					if (TState = "001" or (TState = "010" and Wait_n = '0')) and NoRead = '0' and Write = '0' then

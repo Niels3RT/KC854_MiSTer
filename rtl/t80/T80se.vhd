@@ -98,7 +98,7 @@ entity T80se is
 		DI              : in  std_logic_vector(7 downto 0);
 		DO              : out std_logic_vector(7 downto 0);
 		IntE            : out std_logic;
-        RETI_n          : out std_logic
+      RETI_n          : out std_logic
 	);
 end T80se;
 
@@ -140,8 +140,8 @@ begin
 			MC         => MCycle,
 			TS         => TState,
 			IntCycle_n => IntCycle_n,
-            IntE       => IntE,
-            RETI_n     => RETI_n);
+			IntE       => IntE,
+			RETI_n     => RETI_n);
 
 	process (RESET_n, CLK_n)
 	begin
