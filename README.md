@@ -6,7 +6,7 @@ See https://en.wikipedia.org/wiki/KC_85
 
 ## The MiSTer Core
 
-The core is in a pretty basic state right now, there is no support for tape input or *.KCC files yet. But *.TAP files work and audio output too.
+The core is in a pretty basic state right now, there is no support for tape input or *.KCC files yet. But *.TAP files work and audio output too. Joystick is semi-working, is ok in caos menu, mostly fails in games.
 
 Type BASIC at the OS prompt to start the basic interpreter from ROM. Type LOAD and enter, then select *.TAP file from osd. Tape load only works at up to 4x turbo. If it fails, try 1x.
 
