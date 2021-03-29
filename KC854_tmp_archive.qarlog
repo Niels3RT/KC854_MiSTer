@@ -1,7 +1,7 @@
 Quartus Prime Archive log --	D:/Mr/KC87/KC854_MiSTer/KC854_tmp_archive.qarlog
 
 Archive:	D:/Mr/KC87/KC854_MiSTer/KC854_tmp_archive.qar
-Date:		Fri Feb 26 09:11:37 2021
+Date:		Sun Mar 07 12:22:41 2021
 Quartus Prime		17.0.0 Build 595 04/25/2017 SJ Lite Edition
 
 	=========== Files Selected: ===========
@@ -103,7 +103,7 @@ D:/Mr/KC87/KC854_MiSTer/sys/video_mixer.sv
 All files archived successfully.
 
 
-******* Archived project restoration attempt on Fri Feb 26 09:11:40 2021
+******* Archived project restoration attempt on Sun Mar 07 12:22:44 2021
 Source archive file:	D:/Mr/KC87/KC854_MiSTer/KC854_tmp_archive.qar
-Archive was extracted into	D:/Mr/KC87/PolyPlay_MiSTer/
+Archive was extracted into	D:/Mr/KC87/TIA-MC1_MiSTer/
 		 - successfully.

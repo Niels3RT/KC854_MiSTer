@@ -31,52 +31,51 @@ use ieee.numeric_std.all;
 
 entity memcontrol is
 	port (
-		clk			: in  std_logic;
-		reset_n		: in  std_logic;
+		clk				: in  std_logic;
+		reset_n			: in  std_logic;
 
-		cpuAddr		: in  std_logic_vector(15 downto 0);
-		cpuDOut		: out std_logic_vector(7 downto 0);
-		cpuDIn		: in  std_logic_vector(7 downto 0);
+		cpuAddr			: in  std_logic_vector(15 downto 0);
+		cpuDOut			: out std_logic_vector(7 downto 0);
+		cpuDIn			: in  std_logic_vector(7 downto 0);
 
-		cpuWR_n		: in  std_logic;
-		cpuRD_n		: in  std_logic;
-		cpuM1_n		: in  std_logic;
-		cpuMREQ_n	: in  std_logic;
-		cpuIORQ_n	: in  std_logic;
+		cpuWR_n			: in  std_logic;
+		cpuRD_n			: in  std_logic;
+		cpuM1_n			: in  std_logic;
+		cpuMREQ_n		: in  std_logic;
+		cpuIORQ_n		: in  std_logic;
 
-		cpuEn			: out std_logic;
-		cpuWait		: out std_logic;
+		cpuEn				: out std_logic;
+		cpuWait			: out std_logic;
 
-		cpuTick		: in  std_logic;
+		cpuTick			: in  std_logic;
 
-		umsr			: in  std_logic;
-		afe			: in  std_logic;
+		umsr				: in  std_logic;
+		afe				: in  std_logic;
 
-		pioPortA		: in  std_logic_vector(7 downto 0);
-		pioPortB		: in  std_logic_vector(7 downto 0);  
+		pioPortA			: in  std_logic_vector(7 downto 0);
+		pioPortB			: in  std_logic_vector(7 downto 0);
+		
+		irm_adr			: in std_logic_vector(13 downto 0);
+		irmPb0_do_2		: out std_logic_vector(7 downto 0);
+		irmCb0_do_2		: out std_logic_vector(7 downto 0);
+		irmPb1_do_2		: out std_logic_vector(7 downto 0);
+		irmCb1_do_2		: out std_logic_vector(7 downto 0);
 				 
-		vidAddr		: in  std_logic_vector(13 downto 0);
-		vidData		: out std_logic_vector(15 downto 0);
-		vidRead		: out std_logic;
-		vidBusy		: out std_logic;
-
-		vidBlinkEn	: out std_logic;
-		vidHires		: out std_logic
+		set_img			: out std_logic;
+		set_cmode		: out std_logic;
+		set_blinken		: out std_logic
 	);
 end memcontrol;
 
 architecture rtl of memcontrol is
-	type   state_type is ( idle, idle_wait, do_idle, read_wait, do_read, write_wait, do_write, finish );
+	type   state_type is ( idle, idle_wait, do_idle, read_wait, do_read, write_wait, do_write );
 	signal mem_state    		: state_type := idle;
 	
+	-- ram temp signals
 	signal tmp_adr				: std_logic_vector(15 downto 0);
 	signal tmp_data_in		: std_logic_vector(7 downto 0);
-
-	-- video read stuff
-	signal vid_state			: std_logic_vector(1 downto 0) := (others => '0');
-	signal vid_adr_old		: std_logic_vector(13 downto 0) := (others => '1');
 	
-	-- PIO
+	-- memory config ports
 	signal port84				: std_logic_vector(7 downto 0);
 	signal port86				: std_logic_vector(7 downto 0);
 
@@ -99,26 +98,18 @@ architecture rtl of memcontrol is
 	-- ram IRM Pixel Bild 0 (Bildwiederholspeicher)
 	signal irmPb0_do_1		: std_logic_vector(7 downto 0);
 	signal irmPb0_wr_n_1		: std_logic;
-	signal irmPb0_adr_2		: std_logic_vector(13 downto 0);
-	signal irmPb0_do_2		: std_logic_vector(7 downto 0);
 
 	-- ram IRM Color Bild 0 (Bildwiederholspeicher)
 	signal irmCb0_do_1		: std_logic_vector(7 downto 0);
 	signal irmCb0_wr_n_1		: std_logic;
-	signal irmCb0_adr_2		: std_logic_vector(13 downto 0);
-	signal irmCb0_do_2		: std_logic_vector(7 downto 0);
 
 	-- ram IRM Pixel Bild 1 (Bildwiederholspeicher)
 	signal irmPb1_do_1		: std_logic_vector(7 downto 0);
 	signal irmPb1_wr_n_1		: std_logic;
-	signal irmPb1_adr_2		: std_logic_vector(13 downto 0);
-	signal irmPb1_do_2		: std_logic_vector(7 downto 0);
 
 	-- ram IRM Color Bild 1 (Bildwiederholspeicher)
 	signal irmCb1_do_1		: std_logic_vector(7 downto 0);
 	signal irmCb1_wr_n_1		: std_logic;
-	signal irmCb1_adr_2		: std_logic_vector(13 downto 0);
-	signal irmCb1_do_2		: std_logic_vector(7 downto 0);
 	
 	-- rom
 	signal rom_data    		: std_logic_vector(7 downto 0);
@@ -137,6 +128,7 @@ architecture rtl of memcontrol is
 	signal ram4_wp				: std_logic := '0';
 	signal ram8_en				: std_logic := '0';
 	signal ram8_wp				: std_logic := '0';
+	signal ram8_raf			: std_logic_vector(3 downto 0) := x"0";
 	signal romC_caos_en		: std_logic := '0';
 	signal romC_basic_en		: std_logic := '1';
 	signal romE_caos_en		: std_logic := '1';
@@ -171,9 +163,15 @@ begin
 		end if;
 		ram8_en			<= pioPortB(5);
 		ram8_wp			<= pioPortB(6);
+		ram8_raf			<= port84(7 downto 4);
 		ram4_en			<= port86(0);
 		ram4_wp			<= port86(1);
 		romC_caos_en	<= port86(7);
+		
+		-- set image to display and color mode
+		set_img     <= port84(0);
+		set_cmode   <= port84(3);
+		set_blinken <= pioPortB(7);
 		
 		-- memory state machine
 		case mem_state is
@@ -201,11 +199,6 @@ begin
 						-- ram0/4 write decide which WR_en to strobe
 						if		cpuAddr(15 downto 14) = b"00" and ram0_en = '1' and ram0_wp = '1' then ram0_we_n  <= '0';	-- ram0
 						elsif	cpuAddr(15 downto 14) = b"01" and ram4_en = '1' and ram4_wp = '1' then ram4_we_n  <= '0';	-- ram4
-						elsif cpuAddr(15 downto 14) = b"10" and irm = '0' then
-							-- ram8 write decide which WR_en to strobe
-							if		ram8_en = '1' and ram8_wp = '1' and port84(4) = '0' then ram8b0_we_n <= '0';	-- ram8 bank 0
-							elsif	ram8_en = '1' and ram8_wp = '1' and port84(4) = '1' then ram8b1_we_n <= '0';	-- ram8 bank 1
-							end if;
 						elsif cpuAddr(15 downto 14) = b"10" and irm = '1' then
 							-- Bildspeicher/systemspeicher
 							if cpuAddr < x"a800" then
@@ -215,9 +208,16 @@ begin
 								elsif	port84(1) = '1' and port84(2) = '1' then irmCb1_wr_n_1 <= '0';		-- Bild 1, Color
 								elsif	port84(1) = '0' and port84(2) = '1' then irmPb1_wr_n_1 <= '0';		-- Bild 1, Pixel
 								end if;
+							elsif port84(2) = '1' and romE_caos_en  = '0' and romC_caos_en  = '1' then
+								irmPb1_wr_n_1 <= '0';	-- Systemspeicher in Bild 1???
 							else
-								-- systemspeicher in Bild0/Pixel
-								irmPb0_wr_n_1 <= '0';
+								irmPb0_wr_n_1 <= '0';	-- Systemspeicher in Bild0/Pixel
+							end if;
+						-- ram8
+						elsif cpuAddr(15 downto 14) = b"10" and irm = '0' then
+							-- ram8 write decide which WR_en to strobe
+							if		ram8_en = '1' and ram8_wp = '1' and ram8_raf = x"2" then ram8b0_we_n <= '0';	-- ram8 bank 0
+							elsif	ram8_en = '1' and ram8_wp = '1' and ram8_raf = x"3" then ram8b1_we_n <= '0';	-- ram8 bank 1
 							end if;
 						end if;
 					-- read memory
@@ -236,7 +236,8 @@ begin
 			when read_wait =>
 				mem_state <= do_read;
 			when do_read =>
-				mem_state <= finish;
+				mem_state <= idle;
+				cpuEn		 <= '1';
 				-- decide which DO to send to cpu
 				if umsr = '0' then
 					-- startup, pass caos romE data to cpu
@@ -245,14 +246,9 @@ begin
 					-- after startup, decide which DO to send to cpu
 					if		tmp_adr(15 downto 14) = b"00"  and ram0_en       = '1' then cpuDOut <= ram0_do;				-- ram0
 					elsif	tmp_adr(15 downto 14) = b"01"  and ram4_en       = '1' then cpuDOut <= ram4_do;				-- ram4
-					elsif	tmp_adr(15 downto 13) = b"110" and romC_basic_en = '1' then cpuDOut <= romC_basic_data;	-- ROM BASIC
 					elsif	tmp_adr(15 downto 13) = b"110" and romC_caos_en  = '1' then cpuDOut <= romC_caos_data;		-- ROM CAOS C
+					elsif	tmp_adr(15 downto 13) = b"110" and romC_basic_en = '1' then cpuDOut <= romC_basic_data;	-- ROM BASIC
 					elsif	tmp_adr(15 downto 13) = b"111" and romE_caos_en  = '1' then cpuDOut <= romE_caos_data;		-- ROM CAOS E
-					elsif tmp_adr(15 downto 14) = b"10"  and irm = '0' then
-						-- ram read decide what DO to send
-						if		ram8_en = '1' and port84(4) = '0' then cpuDOut <= ram8b0_do;		-- ram8 bank 0
-						elsif	ram8_en = '1' and port84(4) = '1' then cpuDOut <= ram8b1_do;		-- ram8 bank 1
-						end if;
 					elsif tmp_adr(15 downto 14) = b"10"  and irm = '1' then
 						-- Bildspeicher/systemspeicher in Bild0/Pixel
 						if tmp_adr < x"a800" then
@@ -262,16 +258,26 @@ begin
 							elsif	port84(1)   = '1' and port84(2) = '1' then cpuDOut <= irmCb1_do_1;	-- Bild 1, Color
 							elsif	port84(1)   = '0' and port84(2) = '1' then cpuDOut <= irmPb1_do_1;	-- Bild 1, Pixel
 							end if;
+						elsif port84(2) = '1' and romE_caos_en  = '0' and romC_caos_en  = '1' then
+							cpuDOut <= irmPb1_do_1;		-- Systemspeicher in Bild 1???
 						else
-							-- systemspeicher in Bild0/Pixel
-							cpuDOut <= irmPb0_do_1;
+							cpuDOut <= irmPb0_do_1;		-- Systemspeicher in Bild0/Pixel
 						end if;
+					elsif tmp_adr(15 downto 14) = b"10"  and irm = '0' then
+						-- ram read decide what DO to send
+						if		ram8_en = '1' and ram8_raf = x"2" then cpuDOut <= ram8b0_do;		-- ram8 bank 0
+						elsif	ram8_en = '1' and ram8_raf = x"3" then cpuDOut <= ram8b1_do;		-- ram8 bank 1
+						end if;
+					-- pullups auf d0-d7
+					else
+						cpuDOut <= x"ff";
 					end if;
 				end if;
 			when write_wait =>
 				mem_state <= do_write;
 			when do_write =>
-				mem_state <= finish;
+				mem_state     <= idle;
+				cpuEn         <= '1';
 				ram0_we_n     <= '1';
 				ram4_we_n     <= '1';
 				ram8b0_we_n   <= '1';
@@ -284,46 +290,10 @@ begin
 			when idle_wait =>
 				mem_state <= do_idle;
 			when do_idle =>
-				mem_state <= finish;
-			when finish =>
 				mem_state <= idle;
-				cpuEn		<= '1';
+				cpuEn		 <= '1';
+				cpuDOut   <= x"ff";
 			end case;
-	end process;
-	
-	-- serve video
-	vidBusy <= '0';
-	vidserv : process
-	begin
-		wait until rising_edge(clk);
-		
-		vidRead <= '0';
-		case vid_state is
-			when b"00" =>
-				irmPb0_adr_2 <= vidAddr;
-				irmCb0_adr_2 <= vidAddr;
-				irmPb1_adr_2 <= vidAddr;
-				irmCb1_adr_2 <= vidAddr;
-				if (vid_adr_old /= vidAddr) then
-					vid_state	 <= b"01";
-				end if;
-			when b"01" =>
-				vid_state <= b"10";
-			when b"10" =>
-				vid_state <= b"11";
-			when b"11" =>
-				vid_state <= b"00";
-				vidRead	 <= '1';
-				vid_adr_old  <= vidAddr;
-				-- real video
-				if	port84(0) = '0' then
-					vidData <= irmCb0_do_2 & irmPb0_do_2;	-- Bild 0
-				else
-					vidData <= irmCb1_do_2 & irmPb1_do_2;	-- Bild 1
-				end if;
-		end case;
-		vidBlinkEn <= pioPortB(7);
-		vidHires  <= not port84(3);
 	end process;
 	 
 	-- ram0
@@ -400,7 +370,7 @@ begin
 			wr1_n => irmPb0_wr_n_1,
 
 			clk2  => clk,
-			addr2 => irmPb0_adr_2,
+			addr2 => irm_adr,
 			din2  => (others => '0'),
 			dout2 => irmPb0_do_2,
 			cs2_n => '0',
@@ -421,7 +391,7 @@ begin
 			wr1_n => irmCb0_wr_n_1,
 
 			clk2  => clk,
-			addr2 => irmCb0_adr_2,
+			addr2 => irm_adr,
 			din2  => (others => '0'),
 			dout2 => irmCb0_do_2,
 			cs2_n => '0',
@@ -442,7 +412,7 @@ begin
 			wr1_n => irmPb1_wr_n_1,
 
 			clk2  => clk,
-			addr2 => irmPb1_adr_2,
+			addr2 => irm_adr,
 			din2  => (others => '0'),
 			dout2 => irmPb1_do_2,
 			cs2_n => '0',
@@ -463,7 +433,7 @@ begin
 			wr1_n => irmCb1_wr_n_1,
 
 			clk2  => clk,
-			addr2 => irmCb1_adr_2,
+			addr2 => irm_adr,
 			din2  => (others => '0'),
 			dout2 => irmCb1_do_2,
 			cs2_n => '0',

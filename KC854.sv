@@ -263,7 +263,6 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 
 ///////////////////////   CLOCKS   ///////////////////////////////
 
-wire clk_vga;
 wire clk_sys;
 wire clkLocked;
 pll pll
@@ -271,7 +270,6 @@ pll pll
 	.refclk(CLK_50M),
 	.rst(0),
 	.outclk_0(clk_sys),
-	.outclk_1(clk_vga),
 	.locked(clkLocked)
 );
 
@@ -284,12 +282,10 @@ wire HSync;
 wire VBlank;
 wire VSync;
 wire ce_pix;
-wire [7:0] video;
 
 kc854 kc854
 (
 	.cpuclk(clk_sys),
-	.vgaclk(clk_vga),
 	.clkLocked(clkLocked),
 	.reset_sig(reset),
 	
@@ -333,12 +329,9 @@ kc854 kc854
 	.ioctl_wait(ioctl_req_wr)
 );
 
-assign CLK_VIDEO = clk_vga;
+assign CLK_VIDEO = clk_sys;
 assign CE_PIXEL = ce_pix;
 
 assign VGA_DE = ~(HBlank | VBlank);
-reg  [26:0] act_cnt;
-always @(posedge clk_sys) act_cnt <= act_cnt + 1'd1; 
-//assign LED_USER    = act_cnt[26]  ? act_cnt[25:18]  > act_cnt[7:0]  : act_cnt[25:18]  <= act_cnt[7:0];
 
 endmodule

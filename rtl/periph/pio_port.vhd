@@ -40,6 +40,7 @@ entity pio_port is
         m1_n  : in std_logic;
         iorq_n : in std_logic;
         rd_n  : in std_logic;
+		  wr_n  : in std_logic;
 
         int   : out std_logic;
         intAck : in std_logic;
@@ -55,6 +56,8 @@ architecture rtl of pio_port is
     type states is (default, setPortMask, setIrqMask);
     signal state    : states := default;
     signal nextState : states := default;
+	 signal do_strobe_int : boolean := false;
+	 signal do_pRdy : boolean := false;
     
     signal mode     : std_logic_vector(1 downto 0) := "01";
     signal irqCtrl  : std_logic_vector(2 downto 0) := (others => '0');
@@ -71,7 +74,8 @@ architecture rtl of pio_port is
     
 begin
     -- TODO
-    pRdy <= '0';
+    --pRdy <= '0';
+	 pRdy <= '1' when do_pRdy else '0';
     
     -- stb debouncing
     strobe : process 
@@ -118,10 +122,12 @@ begin
         nIrqMask := not(irqMask);
         
         int <= '0';
-        -- reset
-        if (mode="00" and irqCtrl(2)='1') then
+        -- int on rising edge on strobe in mode 0 and 1
+        if ((mode="00" or mode="01") and irqCtrl(2)='1' and do_strobe_int) then
             if (stbDebounce(stbDebounce'left downto stbDebounce'left-1)="01") then
                 int <= '1';
+					 do_strobe_int <= false;
+					 do_pRdy <= false;
             end if;
         --elsif (mode="11" and irqCtrl(2)='1' and nIrqMask /= "00000000") then -- mode 3 + irq enabled
 		  elsif (mode(0)='1' and irqCtrl(2)='1' and nIrqMask /= "00000000") then -- mode 3 or 1 + irq enabled
@@ -156,13 +162,8 @@ begin
 					end if;
 				end if;
         end if;
-    end process;
     
-    -- cpu-interface (data-in)
-    cpu_control : process
-    begin
-        wait until rising_edge(clk);
-        
+        -- cpu-interface (data-in)
         if (res_n='0') then
             mode <= "01";
             portMask <= (others => '1');
@@ -174,16 +175,23 @@ begin
             if (iorq_n='0' and m1_n='1') then
                 -- Data ?
                 if (cdSel='0') then
-                    if (rd_n='1') then
+                    if wr_n = '0' then
                         -- write
                         pOutReg <= dIn;
-                    else
+								if mode = b"00" then
+									do_pRdy <= true;
+									do_strobe_int <= true;
+								end if;
+                    elsif rd_n = '0' then
                         -- read
---                        dOut <= input;
+								if mode = b"01" then
+									do_pRdy <= true;
+									do_strobe_int <= true;
+								end if;
                     end if;
                 else
                     -- Control ?
-                    if (rd_n='1') then
+                    if wr_n = '0' then
                         -- write
                         nextState <= default;
 

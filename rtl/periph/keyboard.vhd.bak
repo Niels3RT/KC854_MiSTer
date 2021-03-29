@@ -1,3 +1,6 @@
+--
+-- some things rewritten to suit MiSTer keyboard input Niels Lueddecke in 2021
+--
 -- Copyright (c) 2015, $ME
 -- All rights reserved.
 --
@@ -28,112 +31,117 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all; 
 
 entity keyboard is
-    generic (
-        SYSCLK : integer := 50_000_0
-    );
-    port (
-        clk     : in std_logic;
-        res_n   : in std_logic;
-        
-        ps2clk  : inout std_logic;
-        ps2data : inout std_logic;
-        
-        remo    : out std_logic;
-        
-        ps2code : out std_logic_vector(7 downto 0);
-        kcKey   : out std_logic_vector(7 downto 0);
-        kcKeydown : out std_logic;
-        ps2shift : out std_logic
-        
-    );
+		generic (
+			SYSCLK : integer := 50_000_000
+		);
+		port (
+			clk				: in std_logic;
+			res_n				: in std_logic;
+
+			turbo				: in  std_logic_vector(1 downto 0);
+
+			scancode			: in std_logic_vector(7 downto 0);
+			scanstate		: in std_logic;
+			rcvd				: in std_logic;
+
+			remo				: out std_logic
+		);
 end keyboard;
 
 architecture rtl of keyboard is
-    constant MAX_DIV : integer := SYSCLK / (62_5) * 64 - 1;
-    
-    signal clockDiv  : integer range 0 to MAX_DIV := 0;
-    --  5: 0 Bit
-    --  7: 1 Bit
-    -- 14: Wortabstand
-    -- 19: Doppelwortabstand
-    signal pulseCnt  : integer range 0 to 18 := 0;
-    
-    signal keyClockEn : boolean;
-    
-    signal scancode  : std_logic_vector(7 downto 0);
-    
-    signal keyShift  : std_logic_vector(7 downto 0) := "00000000";
-    signal currentKey : std_logic_vector(7 downto 0);
-    
-    signal key       : std_logic_vector(7 downto 0);
+	--constant MAX_DIV			: integer := SYSCLK / (62_5) * 64 - 1;
+	--constant c_MAX_DIV		: unsigned(31 downto 0) := x"00000000" + SYSCLK / (62_5) * 64 - 1;
+	--constant c_MAX_DIV		: unsigned(31 downto 0) := x"00000000" + SYSCLK / 1060 - 1;		--1060hz, 1x gut nicht perfekt, 2x perfekt,  4x wwwwwww, 8x perfekt
+	--constant c_MAX_DIV		: unsigned(31 downto 0) := x"00000000" + SYSCLK / 1024 - 1;		--1024hz, in original fpga implementation, 1x nicht perfekt, 2x sehr gut, 4x wwww, 8x fast sehr gut
+	--constant c_MAX_DIV		: unsigned(31 downto 0) := x"00000000" + SYSCLK / 1000 - 1;		--1000hz, 1x nicht perfekt, 2x perfekt, 4x gut aber fehler, 8x sehr gut
+	--constant c_MAX_DIV		: unsigned(31 downto 0) := x"00000000" + SYSCLK / 976 - 1;		--1024us, KC82/2 kbd Handbuch, 1x nicht perfekt, 2x sehr gut, 4x sehr gut, 8x keine fkt
+	--constant c_MAX_DIV		: unsigned(31 downto 0) := x"00000000" + SYSCLK / 1000 - 1;		--950hz, 1x gut, 2x gut, 4x gut aber fehler, 8x perfekt
+	
+	signal MAX_DIV				: unsigned(31 downto 0) := (others => '0');
 
-    signal rcvd      : std_logic;
-    
-    signal rshift    : boolean := false;
-    signal lshift    : boolean := false;
-    signal altkey    : boolean := false;
+	--signal clockDiv			: integer range 0 to MAX_DIV := 0;
+	signal clockDiv			: unsigned(31 downto 0) := (others => '0');
+	--  5: 0 Bit
+	--  7: 1 Bit
+	-- 14: Wortabstand
+	-- 19: Doppelwortabstand
+	signal pulseCnt			: integer range 0 to 18 := 0;
 
-    signal breakcode : boolean;
-    signal keydown   : boolean;
-    signal keydownDelayed : boolean;
-    signal keyRepeat : integer range 0 to 2 := 0;
-    signal keycode   : std_logic_vector(7 downto 0);
+	signal keyClockEn			: boolean;
 
-    signal iKey      : integer range 0 to 128 := 0;
-    
+	signal keyShift			: std_logic_vector(7 downto 0) := "00000000";
+	signal currentKey			: std_logic_vector(7 downto 0);
+
+	signal key					: std_logic_vector(7 downto 0);
+	signal key_cnt				: unsigned(3 downto 0) := x"0";
+	signal key_cnt_old		: unsigned(3 downto 0) := x"0";
+
+	signal rshift				: boolean := false;
+	signal lshift				: boolean := false;
+	signal altkey				: boolean := false;
+
+	signal keydown				: boolean;
+	signal keydownDelayed	: boolean;
+	signal keyup				: boolean;
+	signal keyupDelayed		: boolean;
+	signal keyRepeat			: integer range 0 to 2 := 0;
+	signal keycode				: std_logic_vector(7 downto 0);
+	signal keycode_last		: std_logic_vector(7 downto 0);
+
+	signal key_repeat_cnt	: unsigned(31 downto 0) := (others => '0');
+	signal key_repeat_state	: std_logic := '0';
+
+	signal iKey					: integer range 0 to 128 := 0;
+
+	signal turbo_old			: std_logic_vector(1 downto 0) := b"00";
+
 begin
-    key <= std_logic_vector(to_unsigned(iKey,8));
---    kcKey <= std_logic_vector(to_unsigned(iKey / 10,4)) & std_logic_vector(to_unsigned(iKey mod 10,4));
-    kcKey <= std_logic_vector(to_unsigned(iKey, 8));
-    kcKeydown <= '1' when keydown else '0';
-    ps2code <= keycode;
-    ps2shift <= '1' when lshift or rshift else '0';
     
-    ps2if : entity work.ps2if
-    generic map (
-        SYSCLK => SYSCLK * 100
-    )
-    port map (
-        clk     => clk,
-        res     => '1',
-        ps2clk  => ps2clk,
-        ps2data => ps2data,
-        data    => scancode,
-        error   => open,
-        rcvd    => rcvd
-    );
-    
-    keystates : process
-    begin
-        wait until rising_edge(clk);
-
-        if (rcvd='1') then
-            if scancode=x"F0" then -- keyup => break-code
-                breakcode <= true;
-                keydown <= false; 
-            else -- keyevent
-                breakcode <= false;
-        
-                if (scancode = x"59") then -- shift rechts
-                    rshift <= not breakcode;
-                elsif (scancode = x"12") then -- shift links
-                    lshift <= not breakcode;
-                elsif (scancode = x"11") then -- alt / alt gr
-                    altkey <= not breakcode;
-                elsif (scancode /= x"e0" and scancode /= x"e1") then -- e0/e1 ignorieren
-                    keydown <= not breakcode;
-                    keycode <= scancode;
-                end if;
-            end if;
-        end if;
-    end process;
-    
-    decodekeys : process(keycode,rshift,lshift,keydown,altkey)
---    decodekeys : process
+	keystates : process
+	begin
+		wait until rising_edge(clk);
+		
+		keydown <= false;
+		keyup   <= false;
+		
+		if (rcvd = '1') then
+			if (scancode = x"59") then -- shift rechts
+				if scanstate = '1' then
+					rshift <= true;
+				else
+					rshift <= false;
+				end if;
+			elsif (scancode = x"12") then -- shift links
+				if scanstate = '1' then
+					lshift <= true;
+				else
+					lshift <= false;
+				end if;
+			elsif (scancode = x"11") then -- alt / alt gr
+				if scanstate = '1' then
+					altkey <= true;
+				else
+					altkey <= false;
+				end if;
+			elsif (scancode /= x"e0" and scancode /= x"e1") then -- e0/e1 ignorieren
+				if scanstate = '1' then
+					if keycode_last /= scancode then
+						keydown <= true;
+						keycode <= scancode;
+					end if;
+				else
+					keyup <= true;
+					keycode_last <= x"00";
+				end if;
+			end if;
+		end if;
+	end process;
+ 
+    decodekeys : process
         variable shift : std_logic;
         variable alt   : std_logic;
     begin
---        wait until rising_edge(clk);
+        wait until rising_edge(clk);
         
         shift := '1';
         if (lshift or rshift) then
@@ -146,6 +154,7 @@ begin
         end if;
         
         keydownDelayed <= keydown;
+		  keyupDelayed   <= keyup;
      
         case alt & shift & keycode is
             when '0' & '0' & x"1d"  => iKey <= 0;   -- W
@@ -292,54 +301,86 @@ begin
             when others => iKey <= 128; -- no key
         end case;
     end process;
-    
-    -- clock fuer ausgang -> 1024Hz
-    divider : process
-    begin
-        wait until rising_edge(clk);
+		
+	-- clock fuer ausgang -> 1024Hz
+	divider : process
+	begin
+		wait until rising_edge(clk);
+		
+		-- divide clock for kbd interface
+		if (clockDiv < MAX_DIV) then
+			clockDiv <= clockDiv + 1;
+			keyClockEn <= false;
+		else
+			clockDiv <= x"00000000";
+			keyClockEn <= true;
+		end if;
 
-        if (clockDiv < MAX_DIV) then
-            clockDiv <= clockDiv + 1;
-            keyClockEn <= false;
-        else
-            clockDiv <= 0;
-            keyClockEn <= true;
-        end if;
-    end process;
-    
-    key <= std_logic_vector(to_unsigned(iKey,8));
-    
-    -- keycode auf den ausgang schieben
-    shiftout : process
-    begin
-        wait until rising_edge(clk);
-        
-        if (keyClockEn) then
-            if (pulseCnt>0) then
-                pulseCnt <= pulseCnt - 1;
-                remo <= '0';
-            elsif (keyShift /= "00000000") then
-                if (keyShift="00000001") then -- letztes bit
-                    pulseCnt <= 13; -- -> Wortabstand
-                elsif (keyShift(0)='1') then
-                    pulseCnt <= 6; -- 1 Bit
-                else
-                    pulseCnt <= 4; -- 0 Bit
-                end if;
-                
-                keyShift <= '0' & keyShift(7 downto 1);
-                remo <= '1';
-            elsif (keyRepeat>0) then
-                keyRepeat <= keyRepeat - 1;
-                keyShift <= currentKey;
-            elsif (keydownDelayed and key(7)='0') then
-                if (key /= currentKey) then -- neue Taste? mind. 2x senden
-                    keyRepeat <= 1;
-                end if;
-                
-                keyShift <= '1' & key(6 downto 0);
-                currentKey <= '1' & key(6 downto 0);
-            end if;
-        end if;
-    end process;
+		-- set divider by turbo setting
+		if		turbo = b"00" then			-- 1x
+			MAX_DIV	<= x"00000000" + SYSCLK / 976 - 1;		-- 976
+		elsif	turbo = b"01" then			-- 2x
+			--MAX_DIV	<= b"0" & c_MAX_DIV(31 downto 1);
+			MAX_DIV	<= x"00000000" + SYSCLK / 2000 - 1;		-- 1000
+		elsif	turbo = b"10" then			-- 4x
+			--MAX_DIV	<= b"00" & c_MAX_DIV(31 downto 2);
+			MAX_DIV	<= x"00000000" + SYSCLK / 3904 - 1;		-- 976
+		elsif	turbo = b"11" then			-- 8x
+			--MAX_DIV	<= b"000" & c_MAX_DIV(31 downto 3);	
+			MAX_DIV	<=  x"00000000" + SYSCLK / 8000 - 1;	-- 1000
+		end if;
+		
+		-- catch turbo mode change
+		if turbo_old /= turbo then
+			turbo_old <= turbo;
+			clockDiv <= x"00000000";
+		end if;
+	end process;
+
+	-- keycode auf den ausgang schieben
+	shiftout : process
+	begin
+		wait until rising_edge(clk);
+
+		if (keyClockEn) then
+			if (pulseCnt > 0) then
+				pulseCnt <= pulseCnt - 1;
+				remo <= '0';
+			elsif (keyShift /= "00000000") then
+				if (keyShift = "00000001") then -- letztes bit
+						pulseCnt <= 13; -- -> Wortabstand
+					elsif (keyShift(0)='1') then
+						pulseCnt <= 6; -- 1 Bit
+					else
+						pulseCnt <= 4; -- 0 Bit
+				end if;
+				keyShift <= '0' & keyShift(7 downto 1);
+				remo <= '1';
+			elsif (keyRepeat > 0) then
+				keyRepeat <= keyRepeat - 1;
+				keyShift <= currentKey;
+			-- in turbo mode single key press only
+			elsif (key_cnt_old /= key_cnt) or (key_repeat_state = '1' and turbo = b"00") then
+				key_cnt_old <= key_cnt;
+				keyRepeat  <= 0;
+				keyShift   <= '1' & key(6 downto 0);
+				currentKey <= '1' & key(6 downto 0);
+			end if;
+		end if;
+		
+		-- fresh key is pressed
+		if keydownDelayed = true then
+			key <= std_logic_vector(to_unsigned(iKey,8));
+			currentKey <= '1' & std_logic_vector(to_unsigned(iKey,7));
+			key_cnt <= key_cnt + 1;
+			key_repeat_state <= '1';
+			keyRepeat  <= 1;
+			key_repeat_cnt   <= x"00380000";
+		end if;
+		
+		-- key is released
+		if keyupDelayed = true then
+			key_repeat_state <= '0';
+		end if;
+	end process;
 end;

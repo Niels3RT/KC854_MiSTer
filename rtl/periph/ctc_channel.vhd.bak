@@ -36,7 +36,6 @@ entity ctc_channel is
         dOut  : out std_logic_vector(7 downto 0);
         
         rd_n    : in std_logic;
-		  wr_n    : in std_logic;
         
         int   : out std_logic;
         setTC : out std_logic;
@@ -142,7 +141,7 @@ begin
             running <= false;
             timeConstant <= 256;
         elsif (en='1') then
-            if wr_n = '0' then -- CTC Write
+            if (rd_n='1') then -- CTC Write
                 if (state=setTimeConstant) then -- set Time Constant 
                     nextState <= default;
                     running <= true;
@@ -159,9 +158,6 @@ begin
                     
                     if (dIn(2)='1') then -- Time Constant Follows
                         nextState <= setTimeConstant;
-						  else
-								running <= false;	-- hack for polyplay to stop audio, undocumented feature?
-														-- now behaves like mame???
                     end if;
                     
                     if (dIn(1)='1') then -- reset

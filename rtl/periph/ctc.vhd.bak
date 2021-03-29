@@ -41,7 +41,6 @@ entity ctc is
         m1_n    : in std_logic; -- negative
         iorq_n  : in std_logic; -- negative
         rd_n    : in std_logic; -- negative
-		  wr_n    : in std_logic;
         
         int     : out std_logic_vector(3 downto 0);
         intAck  : in std_logic_vector(3 downto 0);
@@ -104,7 +103,6 @@ begin
             dOut    => cDOut(i),
             
             rd_n    => rd_n,
-				wr_n    => wr_n,
             
             int     => int(i),
             

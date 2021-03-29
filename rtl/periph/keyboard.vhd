@@ -88,7 +88,7 @@ architecture rtl of keyboard is
 	signal keycode				: std_logic_vector(7 downto 0);
 	signal keycode_last		: std_logic_vector(7 downto 0);
 
-	signal key_repeat_cnt	: unsigned(31 downto 0) := (others => '0');
+	--signal key_repeat_cnt	: unsigned(31 downto 0) := (others => '0');
 	signal key_repeat_state	: std_logic := '0';
 
 	signal iKey					: integer range 0 to 128 := 0;
@@ -318,7 +318,6 @@ begin
 
 		-- set divider by turbo setting
 		if		turbo = b"00" then			-- 1x
-			--MAX_DIV	<= c_MAX_DIV;
 			MAX_DIV	<= x"00000000" + SYSCLK / 976 - 1;		-- 976
 		elsif	turbo = b"01" then			-- 2x
 			--MAX_DIV	<= b"0" & c_MAX_DIV(31 downto 1);
@@ -376,7 +375,7 @@ begin
 			key_cnt <= key_cnt + 1;
 			key_repeat_state <= '1';
 			keyRepeat  <= 1;
-			key_repeat_cnt   <= x"00380000";
+			--key_repeat_cnt   <= x"00380000";
 		end if;
 		
 		-- key is released

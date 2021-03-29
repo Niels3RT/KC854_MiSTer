@@ -4,19 +4,15 @@
 			"name" : "Top",
 			"pins" : [
 				{
-					"name" : "AUDIO_L",
+					"name" : "HDMI_TX_DE",
 					"strict" : false
 				},
 				{
-					"name" : "AUDIO_R",
+					"name" : "HDMI_TX_HS",
 					"strict" : false
 				},
 				{
-					"name" : "AUDIO_SPDIF",
-					"strict" : false
-				},
-				{
-					"name" : "IO_SCL",
+					"name" : "HDMI_TX_VS",
 					"strict" : false
 				},
 				{
@@ -33,10 +29,6 @@
 				},
 				{
 					"name" : "HDMI_I2S",
-					"strict" : false
-				},
-				{
-					"name" : "HDMI_TX_DE",
 					"strict" : false
 				},
 				{
@@ -136,10 +128,6 @@
 					"strict" : false
 				},
 				{
-					"name" : "HDMI_TX_HS",
-					"strict" : false
-				},
-				{
 					"name" : "VGA_R[0]",
 					"strict" : false
 				},
@@ -216,7 +204,15 @@
 					"strict" : false
 				},
 				{
-					"name" : "LED_USER",
+					"name" : "AUDIO_L",
+					"strict" : false
+				},
+				{
+					"name" : "AUDIO_R",
+					"strict" : false
+				},
+				{
+					"name" : "AUDIO_SPDIF",
 					"strict" : false
 				},
 				{
@@ -224,15 +220,7 @@
 					"strict" : false
 				},
 				{
-					"name" : "LED_POWER",
-					"strict" : false
-				},
-				{
 					"name" : "SD_SPI_CS",
-					"strict" : false
-				},
-				{
-					"name" : "LED[0]",
 					"strict" : false
 				},
 				{
@@ -240,11 +228,7 @@
 					"strict" : false
 				},
 				{
-					"name" : "LED[4]",
-					"strict" : false
-				},
-				{
-					"name" : "HDMI_TX_VS",
+					"name" : "LED[0]",
 					"strict" : false
 				},
 				{
@@ -253,6 +237,10 @@
 				},
 				{
 					"name" : "LED[3]",
+					"strict" : false
+				},
+				{
+					"name" : "LED[4]",
 					"strict" : false
 				},
 				{
@@ -268,7 +256,7 @@
 					"strict" : false
 				},
 				{
-					"name" : "IO_SDA",
+					"name" : "IO_SCL",
 					"strict" : false
 				},
 				{
@@ -288,10 +276,6 @@
 					"strict" : false
 				},
 				{
-					"name" : "USER_IO[3]",
-					"strict" : false
-				},
-				{
 					"name" : "USER_IO[4]",
 					"strict" : false
 				},
@@ -300,15 +284,15 @@
 					"strict" : false
 				},
 				{
+					"name" : "IO_SDA",
+					"strict" : false
+				},
+				{
 					"name" : "BTN_RESET",
 					"strict" : false
 				},
 				{
 					"name" : "SW[3]",
-					"strict" : false
-				},
-				{
-					"name" : "SW[0]",
 					"strict" : false
 				},
 				{
@@ -324,11 +308,11 @@
 					"strict" : false
 				},
 				{
-					"name" : "HDMI_TX_INT",
+					"name" : "SW[0]",
 					"strict" : false
 				},
 				{
-					"name" : "SW[1]",
+					"name" : "HDMI_TX_INT",
 					"strict" : false
 				},
 				{

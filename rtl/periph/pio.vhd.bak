@@ -39,7 +39,6 @@ entity pio is
         m1_n  : in std_logic;
         iorq_n : in std_logic;
         rd_n  : in std_logic;
-		  wr_n  : in std_logic;
 
         int   : out std_logic_vector(1 downto 0);
         intAck : in std_logic_vector(1 downto 0);
@@ -94,7 +93,6 @@ begin
           m1_n      => m1_n,
           iorq_n    => iorq_n,
           rd_n      => rd_n,
-			 wr_n      => wr_n,
           int       => int(i),
           intAck    => intAck(i),
           pIn       => pioPortIn(i),
