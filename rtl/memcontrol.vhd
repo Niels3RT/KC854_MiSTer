@@ -200,16 +200,14 @@ begin
 						if		cpuAddr(15 downto 14) = b"00" and ram0_en = '1' and ram0_wp = '1' then ram0_we_n  <= '0';	-- ram0
 						elsif	cpuAddr(15 downto 14) = b"01" and ram4_en = '1' and ram4_wp = '1' then ram4_we_n  <= '0';	-- ram4
 						elsif cpuAddr(15 downto 14) = b"10" and irm = '1' then
-							-- Bildspeicher/systemspeicher
-							if cpuAddr < x"a800" then
+							-- Bildspeicher/systemspeicher in Bild0/Pixel, or 'hidden' system memory areas in irm
+							if cpuAddr < x"a800" or (romE_caos_en  = '0' and romC_caos_en  = '1') then
 								-- irm write decide which WR_en to strobe
 								if		port84(1) = '1' and port84(2) = '0' then irmCb0_wr_n_1 <= '0';		-- Bild 0, Color
 								elsif	port84(1) = '0' and port84(2) = '0' then irmPb0_wr_n_1 <= '0';		-- Bild 0, Pixel
 								elsif	port84(1) = '1' and port84(2) = '1' then irmCb1_wr_n_1 <= '0';		-- Bild 1, Color
 								elsif	port84(1) = '0' and port84(2) = '1' then irmPb1_wr_n_1 <= '0';		-- Bild 1, Pixel
 								end if;
-							elsif port84(2) = '1' and romE_caos_en  = '0' and romC_caos_en  = '1' then
-								irmPb1_wr_n_1 <= '0';	-- Systemspeicher in Bild 1???
 							else
 								irmPb0_wr_n_1 <= '0';	-- Systemspeicher in Bild0/Pixel
 							end if;
@@ -250,16 +248,14 @@ begin
 					elsif	tmp_adr(15 downto 13) = b"110" and romC_basic_en = '1' then cpuDOut <= romC_basic_data;	-- ROM BASIC
 					elsif	tmp_adr(15 downto 13) = b"111" and romE_caos_en  = '1' then cpuDOut <= romE_caos_data;		-- ROM CAOS E
 					elsif tmp_adr(15 downto 14) = b"10"  and irm = '1' then
-						-- Bildspeicher/systemspeicher in Bild0/Pixel
-						if tmp_adr < x"a800" then
+						-- Bildspeicher/systemspeicher in Bild0/Pixel, or 'hidden' system memory areas in irm
+						if tmp_adr < x"a800" or (romE_caos_en  = '0' and romC_caos_en  = '1') then
 							-- irm read decide what DO to send
 							if		port84(1)   = '1' and port84(2) = '0' then cpuDOut <= irmCb0_do_1;	-- Bild 0, Color
 							elsif	port84(1)   = '0' and port84(2) = '0' then cpuDOut <= irmPb0_do_1;	-- Bild 0, Pixel
 							elsif	port84(1)   = '1' and port84(2) = '1' then cpuDOut <= irmCb1_do_1;	-- Bild 1, Color
 							elsif	port84(1)   = '0' and port84(2) = '1' then cpuDOut <= irmPb1_do_1;	-- Bild 1, Pixel
 							end if;
-						elsif port84(2) = '1' and romE_caos_en  = '0' and romC_caos_en  = '1' then
-							cpuDOut <= irmPb1_do_1;		-- Systemspeicher in Bild 1???
 						else
 							cpuDOut <= irmPb0_do_1;		-- Systemspeicher in Bild0/Pixel
 						end if;
