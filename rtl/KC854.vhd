@@ -466,7 +466,8 @@ begin
 	keyboard : entity work.keyboard
 		port map (
 			clk			=> cpuclk,
-			res_n			=> clkLocked,
+			res_n			=> cpuReset_n,
+			tick_cpu    => cpuEn,
 			turbo    	=> turbo,
 			scancode		=> ps2_code,
 			scanstate	=> ps2_state,
@@ -495,7 +496,7 @@ begin
 	sysclock : entity work.sysclock
 		port map (
 			clk      => cpuclk,
---			reset_n  => cpuReset_n,
+			cpuEn    => cpuEn,
 			turbo    => turbo,
 			tick_cpu => cpuTick,
 			tick_vid => vidTick

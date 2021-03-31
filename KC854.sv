@@ -210,7 +210,7 @@ localparam CONF_STR = {
 	"-;",
 	"O12,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"-;",
-	"O34,CPU Turbo,1x,2x,4x,8x;",
+	"O34,CPU Turbo,1x,2x,4x,Max;",
 	"-;",
 	"F,TAP,Load Tape;",
 	"-;",

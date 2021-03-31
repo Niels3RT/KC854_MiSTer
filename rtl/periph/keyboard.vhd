@@ -37,6 +37,7 @@ entity keyboard is
 		port (
 			clk				: in std_logic;
 			res_n				: in std_logic;
+			tick_cpu			: in std_logic;
 
 			turbo				: in  std_logic_vector(1 downto 0);
 
@@ -49,18 +50,7 @@ entity keyboard is
 end keyboard;
 
 architecture rtl of keyboard is
-	--constant MAX_DIV			: integer := SYSCLK / (62_5) * 64 - 1;
-	--constant c_MAX_DIV		: unsigned(31 downto 0) := x"00000000" + SYSCLK / (62_5) * 64 - 1;
-	--constant c_MAX_DIV		: unsigned(31 downto 0) := x"00000000" + SYSCLK / 1060 - 1;		--1060hz, 1x gut nicht perfekt, 2x perfekt,  4x wwwwwww, 8x perfekt
-	--constant c_MAX_DIV		: unsigned(31 downto 0) := x"00000000" + SYSCLK / 1024 - 1;		--1024hz, in original fpga implementation, 1x nicht perfekt, 2x sehr gut, 4x wwww, 8x fast sehr gut
-	--constant c_MAX_DIV		: unsigned(31 downto 0) := x"00000000" + SYSCLK / 1000 - 1;		--1000hz, 1x nicht perfekt, 2x perfekt, 4x gut aber fehler, 8x sehr gut
-	--constant c_MAX_DIV		: unsigned(31 downto 0) := x"00000000" + SYSCLK / 976 - 1;		--1024us, KC82/2 kbd Handbuch, 1x nicht perfekt, 2x sehr gut, 4x sehr gut, 8x keine fkt
-	--constant c_MAX_DIV		: unsigned(31 downto 0) := x"00000000" + SYSCLK / 1000 - 1;		--950hz, 1x gut, 2x gut, 4x gut aber fehler, 8x perfekt
-	
-	signal MAX_DIV				: unsigned(31 downto 0) := (others => '0');
-
-	--signal clockDiv			: integer range 0 to MAX_DIV := 0;
-	signal clockDiv			: unsigned(31 downto 0) := (others => '0');
+	signal clockDiv			: unsigned(11 downto 0) := (others => '0');
 	--  5: 0 Bit
 	--  7: 1 Bit
 	-- 14: Wortabstand
@@ -88,12 +78,9 @@ architecture rtl of keyboard is
 	signal keycode				: std_logic_vector(7 downto 0);
 	signal keycode_last		: std_logic_vector(7 downto 0);
 
-	--signal key_repeat_cnt	: unsigned(31 downto 0) := (others => '0');
 	signal key_repeat_state	: std_logic := '0';
 
 	signal iKey					: integer range 0 to 128 := 0;
-
-	signal turbo_old			: std_logic_vector(1 downto 0) := b"00";
 
 begin
     
@@ -308,32 +295,14 @@ begin
 		wait until rising_edge(clk);
 		
 		-- divide clock for kbd interface
-		if (clockDiv < MAX_DIV) then
-			clockDiv <= clockDiv + 1;
+		if (clockDiv < 1603) then
+			if tick_cpu = '1' then
+				clockDiv <= clockDiv + 1;
+			end if;
 			keyClockEn <= false;
 		else
-			clockDiv <= x"00000000";
+			clockDiv <= x"000";
 			keyClockEn <= true;
-		end if;
-
-		-- set divider by turbo setting
-		if		turbo = b"00" then			-- 1x
-			MAX_DIV	<= x"00000000" + SYSCLK / 976 - 1;		-- 976
-		elsif	turbo = b"01" then			-- 2x
-			--MAX_DIV	<= b"0" & c_MAX_DIV(31 downto 1);
-			MAX_DIV	<= x"00000000" + SYSCLK / 2000 - 1;		-- 1000
-		elsif	turbo = b"10" then			-- 4x
-			--MAX_DIV	<= b"00" & c_MAX_DIV(31 downto 2);
-			MAX_DIV	<= x"00000000" + SYSCLK / 3904 - 1;		-- 976
-		elsif	turbo = b"11" then			-- 8x
-			--MAX_DIV	<= b"000" & c_MAX_DIV(31 downto 3);	
-			MAX_DIV	<=  x"00000000" + SYSCLK / 8000 - 1;	-- 1000
-		end if;
-		
-		-- catch turbo mode change
-		if turbo_old /= turbo then
-			turbo_old <= turbo;
-			clockDiv <= x"00000000";
 		end if;
 	end process;
 

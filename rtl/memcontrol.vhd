@@ -68,7 +68,7 @@ entity memcontrol is
 end memcontrol;
 
 architecture rtl of memcontrol is
-	type   state_type is ( idle, idle_wait, do_idle, read_wait, do_read, write_wait, do_write );
+	type   state_type is ( idle, read_wait, do_read );
 	signal mem_state    		: state_type := idle;
 	
 	-- ram temp signals
@@ -162,6 +162,13 @@ begin
 		set_cmode   <= port84(3);
 		set_blinken <= pioPortB(7);
 		
+		-- disable wr_n's by default
+		ram_we_n      <= '1';
+		irmPb0_wr_n_1 <= '1';
+		irmCb0_wr_n_1 <= '1';
+		irmPb1_wr_n_1 <= '1';
+		irmCb1_wr_n_1 <= '1';
+		
 		-- memory state machine
 		case mem_state is
 			when idle =>
@@ -171,8 +178,7 @@ begin
 					romE_caos_adr <= afe & x"000";
 					cpuDOut <= romE_caos_data;	-- ROM CAOS E reset vector
 				elsif cpuTick = '1' then
-					mem_state <= idle_wait;
-					ram_raf   <= ram8_raf;
+					ram_raf <= ram8_raf;
 					-- write to io port 84/86
 					if		(cpuIORQ_n = '0' and cpuM1_n = '1' and cpuWR_n = '0') then
 						case cpuAddr(7 downto 0) is
@@ -181,10 +187,13 @@ begin
 							when x"88" => pioPortA_rdy <= '1';
 							when others => null;
 						end case;
+						mem_state <= idle;
+						cpuEn		 <= '1';
 					-- write memory
 					elsif (cpuMREQ_n = '0' and cpuWR_n = '0') then
-						mem_state <= write_wait;
-						tmp_adr <= cpuAddr;
+						mem_state	<= idle;
+						cpuEn			<= '1';
+						tmp_adr		<= cpuAddr;
 						tmp_data_in <= cpuDIn;
 						-- ram0/4 write decide which WR_en to strobe
 						if		cpuAddr(15 downto 14) = b"00" and ram0_en = '1' and ram0_wp = '1' then
@@ -223,6 +232,10 @@ begin
 						if		cpuAddr(15 downto 14) = b"00" then ram_raf <= x"e";	-- ram0
 						elsif	cpuAddr(15 downto 14) = b"01" then ram_raf <= x"f";	-- ram4
 						end if;
+					else
+						-- short cycle, nothing for memory to do
+						mem_state <= idle;
+						cpuEn		 <= '1';
 					end if;
 				end if;
 			when read_wait =>
@@ -259,23 +272,6 @@ begin
 						cpuDOut <= x"ff";
 					end if;
 				end if;
-			when write_wait =>
-				mem_state <= do_write;
-			when do_write =>
-				mem_state     <= idle;
-				cpuEn         <= '1';
-				ram_we_n      <= '1';
-				irmPb0_wr_n_1 <= '1';
-				irmCb0_wr_n_1 <= '1';
-				irmPb1_wr_n_1 <= '1';
-				irmCb1_wr_n_1 <= '1';
-				cpuDOut <= tmp_data_in;
-			when idle_wait =>
-				mem_state <= do_idle;
-			when do_idle =>
-				mem_state <= idle;
-				cpuEn		 <= '1';
-				cpuDOut   <= x"ff";
 			end case;
 	end process;
 	
