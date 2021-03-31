@@ -78,22 +78,11 @@ architecture rtl of memcontrol is
 	-- memory config ports
 	signal port84				: std_logic_vector(7 downto 0);
 	signal port86				: std_logic_vector(7 downto 0);
-
-	-- ram 0
-	signal ram0_do				: std_logic_vector(7 downto 0);
-	signal ram0_we_n			: std_logic;
-
-	-- ram 4
-	signal ram4_do				: std_logic_vector(7 downto 0);
-	signal ram4_we_n			: std_logic;
-
-	-- ram 8 block 0
-	signal ram8b0_do			: std_logic_vector(7 downto 0);
-	signal ram8b0_we_n		: std_logic;
-
-	-- ram 8 block 1
-	signal ram8b1_do			: std_logic_vector(7 downto 0);
-	signal ram8b1_we_n		: std_logic;
+	
+	-- ram
+	signal ram_do				: std_logic_vector(7 downto 0);
+	signal ram_we_n			: std_logic;
+	signal ram_raf				: std_logic_vector(3 downto 0) := x"0";
 
 	-- ram IRM Pixel Bild 0 (Bildwiederholspeicher)
 	signal irmPb0_do_1		: std_logic_vector(7 downto 0);
@@ -183,6 +172,7 @@ begin
 					cpuDOut <= romE_caos_data;	-- ROM CAOS E reset vector
 				elsif cpuTick = '1' then
 					mem_state <= idle_wait;
+					ram_raf   <= ram8_raf;
 					-- write to io port 84/86
 					if		(cpuIORQ_n = '0' and cpuM1_n = '1' and cpuWR_n = '0') then
 						case cpuAddr(7 downto 0) is
@@ -197,8 +187,12 @@ begin
 						tmp_adr <= cpuAddr;
 						tmp_data_in <= cpuDIn;
 						-- ram0/4 write decide which WR_en to strobe
-						if		cpuAddr(15 downto 14) = b"00" and ram0_en = '1' and ram0_wp = '1' then ram0_we_n  <= '0';	-- ram0
-						elsif	cpuAddr(15 downto 14) = b"01" and ram4_en = '1' and ram4_wp = '1' then ram4_we_n  <= '0';	-- ram4
+						if		cpuAddr(15 downto 14) = b"00" and ram0_en = '1' and ram0_wp = '1' then
+							ram_we_n   <= '0';		-- ram0
+							ram_raf    <= x"e";
+						elsif	cpuAddr(15 downto 14) = b"01" and ram4_en = '1' and ram4_wp = '1' then
+							ram_we_n   <= '0';		-- ram4
+							ram_raf    <= x"f";
 						elsif cpuAddr(15 downto 14) = b"10" and irm = '1' then
 							-- Bildspeicher/systemspeicher in Bild0/Pixel, or 'hidden' system memory areas in irm
 							if cpuAddr < x"a800" or (romE_caos_en  = '0' and romC_caos_en  = '1') then
@@ -212,22 +206,22 @@ begin
 								irmPb0_wr_n_1 <= '0';	-- Systemspeicher in Bild0/Pixel
 							end if;
 						-- ram8
-						elsif cpuAddr(15 downto 14) = b"10" and irm = '0' then
-							-- ram8 write decide which WR_en to strobe
-							if		ram8_en = '1' and ram8_wp = '1' and ram8_raf = x"2" then ram8b0_we_n <= '0';	-- ram8 bank 0
-							elsif	ram8_en = '1' and ram8_wp = '1' and ram8_raf = x"3" then ram8b1_we_n <= '0';	-- ram8 bank 1
-							end if;
+						elsif cpuAddr(15 downto 14) = b"10" and ram8_en = '1' and ram8_wp = '1' then ram_we_n <= '0';	-- ram8
 						end if;
 					-- read memory
 					elsif (cpuMREQ_n='0' and cpuRD_n='0') then
 						mem_state <= read_wait;
-						tmp_adr <= cpuAddr;
+						tmp_adr   <= cpuAddr;
 						if umsr = '0' then
 							-- boot, modify cpu address to point to caos romE, afe differ between poweron and reset button
 							romE_caos_adr <= afe & x"0" & cpuAddr(7 downto 0);
 						else
 							-- normal operation, pass cpu address to caos romE unmodified
 							romE_caos_adr <= cpuAddr(12 downto 0);
+						end if;
+						-- ram0/4 raf
+						if		cpuAddr(15 downto 14) = b"00" then ram_raf <= x"e";	-- ram0
+						elsif	cpuAddr(15 downto 14) = b"01" then ram_raf <= x"f";	-- ram4
 						end if;
 					end if;
 				end if;
@@ -242,8 +236,8 @@ begin
 					cpuDOut <= romE_caos_data;
 				else
 					-- after startup, decide which DO to send to cpu
-					if		tmp_adr(15 downto 14) = b"00"  and ram0_en       = '1' then cpuDOut <= ram0_do;				-- ram0
-					elsif	tmp_adr(15 downto 14) = b"01"  and ram4_en       = '1' then cpuDOut <= ram4_do;				-- ram4
+					if		tmp_adr(15 downto 14) = b"00"  and ram0_en       = '1' then cpuDOut <= ram_do;				-- ram0
+					elsif	tmp_adr(15 downto 14) = b"01"  and ram4_en       = '1' then cpuDOut <= ram_do;				-- ram4
 					elsif	tmp_adr(15 downto 13) = b"110" and romC_caos_en  = '1' then cpuDOut <= romC_caos_data;		-- ROM CAOS C
 					elsif	tmp_adr(15 downto 13) = b"110" and romC_basic_en = '1' then cpuDOut <= romC_basic_data;	-- ROM BASIC
 					elsif	tmp_adr(15 downto 13) = b"111" and romE_caos_en  = '1' then cpuDOut <= romE_caos_data;		-- ROM CAOS E
@@ -259,11 +253,7 @@ begin
 						else
 							cpuDOut <= irmPb0_do_1;		-- Systemspeicher in Bild0/Pixel
 						end if;
-					elsif tmp_adr(15 downto 14) = b"10"  and irm = '0' then
-						-- ram read decide what DO to send
-						if		ram8_en = '1' and ram8_raf = x"2" then cpuDOut <= ram8b0_do;		-- ram8 bank 0
-						elsif	ram8_en = '1' and ram8_raf = x"3" then cpuDOut <= ram8b1_do;		-- ram8 bank 1
-						end if;
+					elsif tmp_adr(15 downto 14) = b"10" and ram8_en = '1' then cpuDOut <= ram_do;		-- ram8
 					-- pullups auf d0-d7
 					else
 						cpuDOut <= x"ff";
@@ -274,10 +264,7 @@ begin
 			when do_write =>
 				mem_state     <= idle;
 				cpuEn         <= '1';
-				ram0_we_n     <= '1';
-				ram4_we_n     <= '1';
-				ram8b0_we_n   <= '1';
-				ram8b1_we_n   <= '1';
+				ram_we_n      <= '1';
 				irmPb0_wr_n_1 <= '1';
 				irmCb0_wr_n_1 <= '1';
 				irmPb1_wr_n_1 <= '1';
@@ -291,65 +278,20 @@ begin
 				cpuDOut   <= x"ff";
 			end case;
 	end process;
-	 
-	-- ram0
-	sram_ram0 : entity work.sram
+	
+	-- ram, 256kb
+	sram_ram : entity work.sram
 		generic map (
-			AddrWidth => 14,
+			AddrWidth => 18,		-- kc85/5 
 			DataWidth => 8
 		)
 		port map (
 			clk  => clk,
-			addr => tmp_adr(13 downto 0),
+			addr => ram_raf(3 downto 0) & tmp_adr(13 downto 0),
 			din  => tmp_data_in,
-			dout => ram0_do,
+			dout => ram_do,
 			ce_n => '0', 
-			we_n => ram0_we_n
-		);
-		
-	-- ram4
-	sram_ram4 : entity work.sram
-		generic map (
-			AddrWidth => 14,
-			DataWidth => 8
-		)
-		port map (
-			clk  => clk,
-			addr => tmp_adr(13 downto 0),
-			din  => tmp_data_in,
-			dout => ram4_do,
-			ce_n => '0', 
-			we_n => ram4_we_n
-		);
-
-	-- ram8b0
-	sram_ram8b0 : entity work.sram
-		generic map (
-			AddrWidth => 14,
-			DataWidth => 8
-		)
-		port map (
-			clk  => clk,
-			addr => tmp_adr(13 downto 0),
-			din  => tmp_data_in,
-			dout => ram8b0_do,
-			ce_n => '0', 
-			we_n => ram8b0_we_n
-		);
-		
-	-- ram8b1
-	sram_ram8b1 : entity work.sram
-		generic map (
-			AddrWidth => 14,
-			DataWidth => 8
-		)
-		port map (
-			clk  => clk,
-			addr => tmp_adr(13 downto 0),
-			din  => tmp_data_in,
-			dout => ram8b1_do,
-			ce_n => '0', 
-			we_n => ram8b1_we_n
+			we_n => ram_we_n
 		);
 	
 	-- irmPb0
@@ -436,27 +378,51 @@ begin
 			wr2_n => '1'
 		);
 	
-	-- caos c
-	caos_c : entity work.caos_c
-		port map (
-			clk => clk,
-			addr => tmp_adr(11 downto 0),
-			data => romC_caos_data
-		);
-	
-	-- basic c
-	basic : entity work.basic
+	-- caos 47 c
+	caos_c : entity work.caos47_c
 		port map (
 			clk => clk,
 			addr => tmp_adr(12 downto 0),
+			data => romC_caos_data
+		);
+	
+	-- user 47 c
+	basic : entity work.user47_c
+		port map (
+			clk => clk,
+			addr => port86(6 downto 5) & tmp_adr(12 downto 0),
 			data => romC_basic_data
 		);
 
-	-- caos e
-	caos_e : entity work.caos_e
+	-- caos 47 e
+	caos_e : entity work.caos47_e
 		port map (
 			clk => clk,
 			addr => romE_caos_adr,
 			data => romE_caos_data
 		);
+	
+--	-- caos 42 c
+--	caos_c : entity work.caos_c
+--		port map (
+--			clk => clk,
+--			addr => tmp_adr(11 downto 0),
+--			data => romC_caos_data
+--		);
+--	
+--	-- basic 42 c
+--	basic : entity work.basic
+--		port map (
+--			clk => clk,
+--			addr => tmp_adr(12 downto 0),
+--			data => romC_basic_data
+--		);
+--
+--	-- caos 42 e
+--	caos_e : entity work.caos_e
+--		port map (
+--			clk => clk,
+--			addr => romE_caos_adr,
+--			data => romE_caos_data
+--		);
 end;
