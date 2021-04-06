@@ -33,6 +33,7 @@ use IEEE.numeric_std.all;
 entity sysclock is
 	port (
 		clk			: in  std_logic;
+		reset_n		: in std_logic;
 		cpuEn			: in  std_logic;
 
 		turbo			: in  std_logic_vector(1 downto 0);
@@ -45,6 +46,7 @@ end sysclock;
 architecture rtl of sysclock is
 	signal cnt_cpu				: unsigned(7 downto 0) := (others => '0');
 	signal cnt_vid				: unsigned(3 downto 0) := (others => '0');
+	signal cnt_start			: unsigned(3 downto 0) := (others => '0');
 	--signal cpuEn_shift		: std_logic_vector(7 downto 0) := (others => '0');
 	signal turbo_use			: std_logic_vector(1 downto 0);
 
@@ -54,34 +56,45 @@ begin
 	begin
 		wait until rising_edge(clk);
 		
-		tick_cpu	   <= '0';
-		--cpuEn_shift <= cpuEn_shift(6 downto 0) & cpuEn;
+		tick_cpu <= '0';
 		
-		-- tick cpu, wait some clocks on max setting
-		if	turbo_use = b"11" then
-			--if cpuEn_shift(3) = '1' then	-- ok
-			--if cpuEn_shift(2) = '1' then	-- ok
-			--if cpuEn_shift(1) = '1' then	-- ok
-			--if cpuEn_shift(0) = '1' then	-- ok
-			if cpuEn = '1' then	-- ok
-				tick_cpu	 <= '1';
-				turbo_use <= turbo;
-			end if;
-		-- tick cpu, use counter for the more normal settings
+		if reset_n = '0' then
+			--tick_cpu	   <= '0';
+			cnt_start <= x"0";
 		else
-			if (cnt_cpu > 0) then
-				cnt_cpu	<= cnt_cpu - 1;
-			else
-				-- turbo setting
-				if		turbo = b"00" then
-					cnt_cpu	<= b"00011111";	-- 1x, /32
-				elsif	turbo = b"01" then
-					cnt_cpu	<= b"00001111";	-- 2x, /16
-				elsif	turbo = b"10" then
-					cnt_cpu	<= b"00000111";	-- 4x, /8
+			if cnt_start < x"f" then
+				cnt_start <= cnt_start + 1;
+			end if;
+			--tick_cpu	   <= '0';
+			--end if;
+			--cpuEn_shift <= cpuEn_shift(6 downto 0) & cpuEn;
+			
+			-- tick cpu, wait some clocks on max setting
+			if	turbo_use = b"11" then
+				--if cpuEn_shift(3) = '1' then	-- ok
+				--if cpuEn_shift(2) = '1' then	-- ok
+				--if cpuEn_shift(1) = '1' then	-- ok
+				--if cpuEn_shift(0) = '1' then	-- ok
+				if cpuEn = '1' or cnt_start = x"e" then	-- ok
+					tick_cpu	 <= '1';
+					turbo_use <= turbo;
 				end if;
-				tick_cpu	 <= '1';
-				turbo_use <= turbo;
+			-- tick cpu, use counter for the more normal settings
+			else
+				if (cnt_cpu > 0) then
+					cnt_cpu	<= cnt_cpu - 1;
+				else
+					-- turbo setting
+					if		turbo = b"00" then
+						cnt_cpu	<= b"00011111";	-- 1x, /32
+					elsif	turbo = b"01" then
+						cnt_cpu	<= b"00001111";	-- 2x, /16
+					elsif	turbo = b"10" then
+						cnt_cpu	<= b"00000111";	-- 4x, /8
+					end if;
+					tick_cpu	 <= '1';
+					turbo_use <= turbo;
+				end if;
 			end if;
 		end if;
 		

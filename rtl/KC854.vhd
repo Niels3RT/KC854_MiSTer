@@ -124,6 +124,8 @@ architecture struct of kc854 is
 	signal h4				: std_logic;
 
 	signal ioSel			: boolean;
+	
+	signal memCS_n			: std_logic;
     
 	signal pioCS_n			: std_logic;
 	
@@ -138,17 +140,9 @@ architecture struct of kc854 is
 	signal pioBStb			: std_logic;
 
 	signal pioDataOut		: std_logic_vector(7 downto 0);
-	signal pio008DataOut	: std_logic_vector(7 downto 0);
 	
-	signal pio008CS_n		: std_logic;
-	signal pio008AIn		: std_logic_vector(7 downto 0);
-	signal pio008AOut		: std_logic_vector(7 downto 0);
-	signal pio008ARdy		: std_logic;
-	signal pio008AStb		: std_logic;
-	signal pio008BIn		: std_logic_vector(7 downto 0);
-	signal pio008BOut		: std_logic_vector(7 downto 0);
-	signal pio008BRdy		: std_logic;
-	signal pio008BStb		: std_logic;
+	signal modDataOut		: std_logic_vector(7 downto 0);
+	signal modcs_n			: std_logic;
 
 	signal ctcCS_n			: std_logic;
 	signal ctcDataOut		: std_logic_vector(7 downto 0);
@@ -164,29 +158,6 @@ architecture struct of kc854 is
 	signal ps2_state		: std_logic;
 	signal ps2_code		: std_logic_vector(7 downto 0);
 	signal old_stb			: std_logic;
-
-	signal m003DataOut	: std_logic_vector(7 downto 0);
-	signal m003Sel			: std_logic;
-	signal m003Test		: std_logic_vector(7 downto 0);
-	signal m003TestUart	: std_logic;
-	signal m003TestRW		: std_logic;
-	
-	signal vidBlinkEn		: std_logic;
-
-	signal vidTest			: std_logic_vector(3 downto 0);
-	
-	-- TEMP for MiSTer switches
-	signal SW				: std_logic_vector(9 downto 0) := (others => '0');
-
-	-- UART
-	signal uartTXD1		: std_logic;
-	signal uartTXD2		: std_logic;
-	signal uartTXD3		: std_logic;
-	signal uartTXDM003	: std_logic;
-	signal uartRXDM003	: std_logic;
-	
-	--KC LEDs MiSTer temp
-	signal LEDR				: std_logic_vector(15 downto 0) := (others => '0');
 	
 	-- TEMP audio_l debug
 	signal AUDIO_L_DBG	: std_logic_vector(15 downto 0);
@@ -196,33 +167,8 @@ begin
 	LED_USER <= '0';
 	LED_POWER <= b"10";
 
-	-- turn on video output
-	--ce_pix <= '1';
-
 	-- reset
 	cpuReset_n <= '0' when resetDelay /= 0 else '1';
-	
-	--USER_OUT(1 downto 0) <= (others => '1');
-	--USER_OUT(6 downto 6) <= (others => '1');
-	--USER_OUT(0) <= zi_n;
-	--USER_OUT(0) <= pioAStb;
-	--USER_OUT(1) <= bi_n;
-	--USER_OUT(2) <= h4;
-	--USER_OUT(6 downto 3) <= ctcZcTo;
-	--USER_OUT(6 downto 2) <= (others => '1');
---	USER_OUT(0) <= ioctl_download;
---	USER_OUT(1) <= cpuInt_n;
---	USER_OUT(2) <= bi_n;
-	--USER_OUT(3) <= cpuIntEna_n;
---	USER_OUT(4 downto 3) <= not intPeriph(17 downto 16);
---	USER_OUT(6 downto 5) <= not intAckPeriph(17 downto 16);
-	--USER_OUT(5 downto 1) <= pioDataOut(4 downto 0) when cpuAddr(7 downto 0) = x"88" and cpuRD_n = '0' and cpuIorq_n = '0' and cpuM1_n='1' else b"11111";
---	USER_OUT(5 downto 1) <= cpuDataOut(4 downto 0) when pioCS_n = '0' and cpuAddr(0) = '0' and cpuAddr(1) = '1' else b"11111";
---	USER_OUT(5 downto 2) <= ioctl_index(3 downto 0);
---	USER_OUT(6) <= pioCS_n when pioCS_n = '0' and cpuAddr(0) = '0' and cpuAddr(1) = '0' else '1';
---	USER_OUT(6 downto 1) <= intAckPeriph(5 downto 0);
-	--USER_OUT(6) <= '0' when cpuAddr(7 downto 0) = x"88" and cpuRD_n = '0' and cpuIorq_n = '0' and cpuM1_n='1' else '1';
-	--cpuDataOut
 
 	reset : process
 	begin
@@ -317,6 +263,8 @@ begin
 
 			cpuEn			=> cpuEn,
 			cpuWait		=> cpuWait,
+			
+			memCS_n		=> memCS_n,
 
 			cpuTick		=> cpuTick,
 
@@ -336,12 +284,12 @@ begin
 
 	-- CPU data-in multiplexer
 	cpuDataIn <= 
-			ctcDataOut		when ctcCS_n = '0'		or intAckPeriph(3 downto 0)   /= "0000" else
-			pioDataOut		when pioCS_n = '0'		or intAckPeriph(5 downto 4)   /= "00"   else
-			pio008DataOut	when pio008CS_n = '0'	or intAckPeriph(17 downto 16) /= "00"   else
-			m003DataOut		when m003Sel = '1'		or intAckPeriph(15 downto 6)  /= "0000000000" else
+			ctcDataOut		when ctcCS_n = '0' or intAckPeriph(3 downto 0)   /= "0000" else
+			pioDataOut		when pioCS_n = '0' or intAckPeriph(5 downto 4)   /= "00"   else
+			memDataOut		when memCS_n = '0' else
+			modDataOut		when modcs_n = '0' or intAckPeriph(17 downto 6)  /= "000000000000"	else
 			x"ff"				when ioSel else	-- make other modules play dead
-			memDataOut;
+			x"ff";									-- pullups on d0-d7
 
 	-- T80 CPU
 	cpu : entity work.T80se
@@ -403,46 +351,6 @@ begin
 			bStb    => pioBStb
 		);
 	
-	-- M008/Joystick PIO: 90H-97BH reserved for M008, here only 90h is used
-	pio008CS_n <= '0' when cpuAddr(7 downto 2) = "100100" and ioSel else '1';	-- <---
-	--pio008CS_n <= '0' when cpuAddr(7 downto 3) = "10010" and ioSel else '1';
-	--pio008CS_n <= '0' when cpuAddr(7 downto 3) = "10010" else '1';
-	pio008BIn  <= (others => '1');
-
---	USER_OUT(0) <= cpuDataOut(7) when ctcCS_n = '0' or pio008CS_n = '0' else '1';
---	USER_OUT(1) <= cpuDataOut(6) when ctcCS_n = '0' or pio008CS_n = '0' else '1';
---	USER_OUT(2) <= cpuDataOut(5) when ctcCS_n = '0' or pio008CS_n = '0' else '1';
---	USER_OUT(3) <= cpuDataOut(4) when ctcCS_n = '0' or pio008CS_n = '0' else '1';
---	USER_OUT(4) <= cpuRD_n when ctcCS_n = '0' or pio008CS_n = '0' else '1';
---	USER_OUT(5) <= pio008CS_n when cpuAddr(7 downto 2) = "100100" else '1';
---	USER_OUT(6) <= ctcCS_n when cpuAddr(7 downto 1) = "1000111" else '1';
-
-	pio_M008 : entity work.pio
-		port map (
-			clk     => cpuclk,
-			res_n   => cpuReset_n,
-			dIn     => cpuDataOut,
-			dOut    => pio008DataOut,
-			baSel   => cpuAddr(0),
-			cdSel   => cpuAddr(1),
-			cs_n    => pio008CS_n,
-			m1_n    => cpuM1_n and cpuReset_n,
-			iorq_n  => cpuIorq_n,
-			rd_n    => cpuRD_n,
-			wr_n    => cpuWR_n,
-			intAck  => intAckPeriph(17 downto 16),
-			int     => intPeriph(17 downto 16),
-			-- fire, fire2, right, left, down, up
-			aIn     => b"11" & not joystick_0(4) & not joystick_0(5) & not joystick_0(0) & not joystick_0(1) & not joystick_0(2) & not joystick_0(3),
-			aOut    => pio008AOut,
-			aRdy    => pio008ARdy,
-			aStb    => bi_n,
-			bIn     => pio008BIn,
-			bOut    => pio008BOut,
-			bRdy    => pio008BRdy,
-			bStb    => bi_n
-		);
-	
 	-- audio output
 	AUDIO_L <= AUDIO_L_DBG;
 	AUDIO_R <= AUDIO_R_DBG;
@@ -496,6 +404,7 @@ begin
 	sysclock : entity work.sysclock
 		port map (
 			clk      => cpuclk,
+			reset_n  => cpuReset_n,
 			cpuEn    => cpuEn,
 			turbo    => turbo,
 			tick_cpu => cpuTick,
@@ -546,59 +455,6 @@ begin
 			ioctl_data  => ioctl_data,
 			ioctl_wait  => ioctl_wait
 		);
-
-	--m003TestUart <= '1' when (not ctcCS_n='0') else '0';
-	m003TestUart <= '1';
-	--m003TestRW <= (cpuRD_n and cpuWR_n);
-	m003TestRW <= '1';
-
-	uart1 : entity work.uart
-		generic map (
-			BAUDRATE => 2_000_000
-		)
-		port map (
-			clk     => cpuclk,
-			cs_n    => m003TestUart,
-			rd_n    => '1',
-			wr_n    => m003TestRW,
-			addr    => "0",
-			dIn     => cpuAddr(7 downto 0),
-			dOut    => open,
-			txd     => uartTXD1,
-			rxd     => '1'
-		);
-
-	uart2 : entity work.uart
-		generic map (
-			BAUDRATE => 2_000_000
-		)
-		port map (
-			clk     => cpuclk,
-			cs_n    => m003TestUart,
-			rd_n    => '1',
-			wr_n    => cpuRD_n,
-			addr    => "0",
-			dIn     => cpuDataIn,
-			dOut    => open,
-			txd     => uartTXD2,
-			rxd     => '1'
-		);
-
-	uart3 : entity work.uart
-		generic map (
-			BAUDRATE => 2_000_000
-		)
-		port map (
-			clk     => cpuclk,
-			cs_n    => m003TestUart,
-			rd_n    => '1',
-			wr_n    => cpuWR_n,
-			addr    => "0",
-			dIn     => cpuDataOut,
-			dOut    => open,
-			txd     => uartTXD3,
-			rxd     => '1'
-		);
  
 	-- interrupt controller
 	intController : entity work.intController
@@ -617,36 +473,34 @@ begin
 			reti_n    => cpuRETI_n,
 			intEna_n  => cpuIntEna_n
 		);
-    
-	m003 : entity work.m003
+	
+	-- modules
+	modules : entity work.modules
+		generic map (
+			NUMINTS => NUMINTS
+		)
 		port map (
-			clk      => cpuclk,
-			sysClkEn => cpuTick,
+			cpuclk		=> cpuclk,
+			cpuEn			=> cpuEn,
+			cpuReset_n	=> cpuReset_n,
+			
+			ioSel			=> ioSel,
 
-			res_n    => cpuReset_n,
-
-			addr     => cpuAddr,
-			dIn      => cpuDataOut,
-			dOut     => m003DataOut,
-
-			modSel   => m003Sel,
-			modEna   => LEDR(9),
-
-			m1_n     => cpuM1_n,
-			mreq_n   => cpuMREQ_n,
-			iorq_n   => cpuIORQ_n,
-			rd_n     => cpuRD_n,
-			wr_n     => cpuWR_n,
-
-			int      => intPeriph(15 downto 6),
-			intAck   => intAckPeriph(15 downto 6),
-
-			divideBy2 => SW(2),
-			aRxd     => '1',
-			aTxd     => open,
-			bRxd     => uartRXDM003,
-			bTxd     => uartTXDM003,
-
-			test     => m003Test
+			addr			=> cpuAddr,
+			dIn			=> cpuDataOut,
+			dOut			=> modDataOut,
+			m1_n			=> cpuM1_n,
+			mreq_n		=> cpuMReq_n,
+			iorq_n		=> cpuIorq_n,
+			rd_n			=> cpuRD_n,
+			wr_n			=> cpuWR_n,
+			
+			int			=> intPeriph(NUMINTS-1 downto 6),
+			intAck		=> intAckPeriph,
+			
+			modcs_n		=> modcs_n,
+			
+			bi_n			=> bi_n,
+			joystick_0	=> joystick_0
 		);
 end;

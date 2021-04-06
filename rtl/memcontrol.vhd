@@ -46,6 +46,8 @@ entity memcontrol is
 
 		cpuEn				: out std_logic;
 		cpuWait			: out std_logic;
+		
+		memCS_n			: out std_logic;
 
 		cpuTick			: in  std_logic;
 
@@ -124,6 +126,16 @@ architecture rtl of memcontrol is
 	signal irm					: std_logic := '1';
 
 begin
+
+	memCS_n <= 
+		'0' when cpuMREQ_n='0' and cpuRD_n='0' and cpuAddr(15 downto 14) = b"00"  and ram0_en = '1' else	-- ram 0
+		'0' when cpuMREQ_n='0' and cpuRD_n='0' and cpuAddr(15 downto 14) = b"01"  and ram4_en = '1' else	-- ram 4
+		'0' when cpuMREQ_n='0' and cpuRD_n='0' and cpuAddr(15 downto 14) = b"10"  and ram8_en = '1' else	-- ram 8
+		'0' when cpuMREQ_n='0' and cpuRD_n='0' and cpuAddr(15 downto 14) = b"10"  and irm = '1'     else	-- irm
+		'0' when cpuMREQ_n='0' and cpuRD_n='0' and cpuAddr(15 downto 13) = b"110" and romC_caos_en  = '1' else	-- rom caos c
+		'0' when cpuMREQ_n='0' and cpuRD_n='0' and cpuAddr(15 downto 13) = b"110" and romC_basic_en = '1' else	-- rom user
+		'0' when cpuMREQ_n='0' and cpuRD_n='0' and cpuAddr(15 downto 13) = b"111" and romE_caos_en  = '1' else	-- rom caos e
+		'1';
 	
 	-- serve cpu
 	cpuserv : process

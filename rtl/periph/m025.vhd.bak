@@ -29,15 +29,14 @@ use IEEE.numeric_std.all;
 
 entity m003 is
     generic (
+        SLOT     : std_logic_vector(7 downto 0) := x"08";
         SIGNATURE :  std_logic_vector(7 downto 0) := x"ee"
     );
     port (
         clk      : in std_logic;
         sysClkEn : in std_logic;
+        
         res_n    : in std_logic;
-		  
-		  ioSel    : in  boolean;
-		  slot     : in  std_logic_vector(7 downto 0);
         
         addr     : in std_logic_vector(15 downto 0);
         dIn      : in std_logic_vector(7 downto 0);
@@ -67,6 +66,7 @@ entity m003 is
 end m003;
 
 architecture rtl of m003 is
+    signal ioSel       : boolean;
     signal controlWordSel : std_logic;
     signal sioCS_n     : std_logic;
     signal ctcCS_n     : std_logic;
@@ -81,8 +81,9 @@ architecture rtl of m003 is
     signal ctcDataOut  : std_logic_vector(7 downto 0);
     signal sioDataOut  : std_logic_vector(7 downto 0);
 begin
+    ioSel   <= iorq_n = '0' and m1_n='1';
     
-    controlWordSel <= '1' when ioSel and addr=(slot & x"80") else '0'; -- Controlword
+    controlWordSel <= '1' when ioSel and addr=(SLOT & x"80") else '0'; -- Controlword
     sioCS_n  <= '0' when enabled and ioSel and addr(7 downto 2)="000010" else '1'; -- 08 - 0B
     ctcCS_n  <= '0' when enabled and ioSel and addr(7 downto 2)="000011" else '1'; -- 0C - 0F
     
