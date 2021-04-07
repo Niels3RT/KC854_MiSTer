@@ -7,28 +7,34 @@ entity modules is
         NUMINTS : integer := 8
 	);
 	port (
-		cpuclk		: in  std_logic;
-		cpuEn			: in  std_logic;
-		cpuReset_n	: in  std_logic;
+		cpuclk			: in  std_logic;
+		cpuEn				: in  std_logic;
+		cpuReset_n		: in  std_logic;
 
-		ioSel			: in  boolean;
+		ioSel				: in  boolean;
 
-		addr			: in  std_logic_vector(15 downto 0);
-		dIn			: in  std_logic_vector(7 downto 0);
-		dOut			: out std_logic_vector(7 downto 0);
-		m1_n			: in  std_logic;
-		mreq_n		: in  std_logic;
-		iorq_n		: in  std_logic;
-		rd_n			: in  std_logic;
-		wr_n			: in  std_logic;
+		addr				: in  std_logic_vector(15 downto 0);
+		dIn				: in  std_logic_vector(7 downto 0);
+		dOut				: out std_logic_vector(7 downto 0);
+		m1_n				: in  std_logic;
+		mreq_n			: in  std_logic;
+		iorq_n			: in  std_logic;
+		rd_n				: in  std_logic;
+		wr_n				: in  std_logic;
 		
-		int			: out std_logic_vector(NUMINTS-1 downto 6);
-		intAck		: in  std_logic_vector(NUMINTS-1 downto 0);
+		int				: out std_logic_vector(NUMINTS-1 downto 6);
+		intAck			: in  std_logic_vector(NUMINTS-1 downto 0);
 
-		modcs_n		: out std_logic;
+		modcs_n			: out std_logic;
 		
-		bi_n			: in  std_logic;
-		joystick_0	: in  std_logic_vector(31 downto 0)
+		bi_n				: in  std_logic;
+		joystick_0		: in  std_logic_vector(31 downto 0);
+		
+		ioctl_download	: in  std_logic;
+		ioctl_index		: in  std_logic_vector(7 downto 0);
+		ioctl_wr			: in  std_logic;
+		ioctl_addr		: in  std_logic_vector(24 downto 0);
+		ioctl_data		: in  std_logic_vector(7 downto 0)
 	);
 	end modules;
 
@@ -159,6 +165,12 @@ begin
 			mreq_n   => mreq_n,
 			iorq_n   => iorq_n,
 			rd_n     => rd_n,
-			wr_n     => wr_n
+			wr_n     => wr_n,
+			
+			ioctl_download => ioctl_download,
+			ioctl_index => ioctl_index,
+			ioctl_wr    => ioctl_wr,
+			ioctl_addr  => ioctl_addr,
+			ioctl_data  => ioctl_data
 		);
 end;

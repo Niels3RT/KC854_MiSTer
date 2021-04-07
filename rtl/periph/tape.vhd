@@ -48,7 +48,7 @@ entity tape is
 		ioctl_wr			: in  std_logic;
 		ioctl_addr		: in  std_logic_vector(24 downto 0);
 		ioctl_data		: in  std_logic_vector(7 downto 0);
-		ioctl_wait		: out  std_logic
+		ioctl_wait		: out std_logic
 	);
 end tape;
 

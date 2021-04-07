@@ -214,6 +214,8 @@ localparam CONF_STR = {
 	"-;",
 	"F,TAP,Load Tape;",
 	"-;",
+	"F,ROM,Load M025;",
+	"-;",
 	"O5,Audio,ON,OFF;",
 	"O6,Tape Noise,OFF,ON;",
 	"O78,Stereo Mix,None,25%,50%,100%;",

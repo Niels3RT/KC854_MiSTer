@@ -501,6 +501,12 @@ begin
 			modcs_n		=> modcs_n,
 			
 			bi_n			=> bi_n,
-			joystick_0	=> joystick_0
+			joystick_0	=> joystick_0,
+			
+			ioctl_download => ioctl_download,
+			ioctl_index => ioctl_index,
+			ioctl_wr    => ioctl_wr,
+			ioctl_addr  => ioctl_addr,
+			ioctl_data  => ioctl_data
 		);
 end;
