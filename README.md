@@ -6,9 +6,17 @@ See https://en.wikipedia.org/wiki/KC_85
 
 ## The MiSTer Core
 
-The core is in a pretty basic state right now, there is no support for tape input or *.KCC files yet. But *.TAP files work and audio output too. Joystick is semi-working, is ok in caos menu, mostly fails in games.
+The core is in a pretty basic state right now. Its currently hardcoded to KC85/5 configuration with CAOS 4.7.
 
-Type BASIC at the OS prompt to start the basic interpreter from ROM. Type LOAD and enter, then select *.TAP file from osd. Tape load only works at up to 4x turbo. If it fails, try 1x.
+Tape loading from file and keyboard should work in all turbo modes.
+
+*.KCC and *.TAP files are supported to load software and audio output works too. This can be used to feed software to a real KC8x via its tape input (at 1x turbo). To load programs type LOAD and enter, then select TAP/KCC file from osd.
+
+Joystick is semi-working, is ok in caos menu, mostly fails in games after some time.
+
+Type BASIC at the OS prompt to start the basic interpreter from ROM.
+
+Software modules like M025 are supported too, load contents via osd. The files should be raw eprom/prom dumps with a *.ROM extension. The modules available from VEB Mikroelektronik Mühlhausen (texor, forth, development) work as far as i could test. Segmented ROM modules like Typestar are not supported (yet).
 
 ## The Copyright Notice that came with the Sources
 

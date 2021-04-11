@@ -213,6 +213,7 @@ localparam CONF_STR = {
 	"O34,CPU Turbo,1x,2x,4x,Max;",
 	"-;",
 	"F,TAP,Load Tape;",
+	"F,KCC,Load Tape;",
 	"-;",
 	"F,ROM,Load M025;",
 	"-;",

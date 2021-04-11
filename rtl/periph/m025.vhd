@@ -54,7 +54,7 @@ begin
 					'1';
 					
 	-- write enable for rom loading
-	rom_we_n <=	'0' when ioctl_download = '1' and ioctl_index = x"04" else
+	rom_we_n <=	'0' when ioctl_download = '1' and ioctl_index = x"05" else
 					'1';
 	
 	-- switch rom addr between loading and reading

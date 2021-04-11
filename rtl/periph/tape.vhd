@@ -83,7 +83,12 @@ end tape;
 		signal buff_we_n			: std_logic := '0';
 		
 		signal block_nr			: unsigned(7 downto 0) := (others => '1');
+		signal block_nr_max		: unsigned(7 downto 0) := (others => '1');
 		signal checksum			: unsigned(7 downto 0) := (others => '0');
+		
+		signal load_adr_start	: unsigned(15 downto 0) := (others => '1');
+		signal load_adr_end		: unsigned(15 downto 0) := (others => '1');
+		signal load_size			: unsigned(15 downto 0) := (others => '1');
 	
 begin
 	process
@@ -204,17 +209,50 @@ begin
 		-- fill block buffer
 		if ioctl_download = '1' and dl_readbyte = '0' and dl_readblock = '1' then
 			dl_readbyte <= '1';
-			if cnt_cut_head > 0 then
-				cnt_cut_head <= cnt_cut_head - 1;
-				if cnt_cut_head = 1 then
-					block_nr <= unsigned(dl_data);
+			-- load *.tap file
+			if ioctl_index = x"03" then
+				if cnt_cut_head > 0 then
+					cnt_cut_head <= cnt_cut_head - 1;
+					if cnt_cut_head = 1 then
+						block_nr <= unsigned(dl_data);
+					end if;
+				else
+					cnt_txadr <= cnt_txadr + 1;
+					-- save byte to block buffer
+					buff_adr    <= std_logic_vector(cnt_txadr(6 downto 0));
+					buff_we_n   <= '0';
+					buff_di     <= dl_data;
+					-- block complete
+					if cnt_txadr(6 downto 0) = b"1111111" then
+						dl_readbyte  <= '0';
+						dl_readblock <= '0';
+						cnt_txadr    <= x"00";
+						tx_cnt_block <= x"000";
+						cnt_cut_head <= x"01";
+					end if;
 				end if;
-			else
+			-- load *.kcc file
+			elsif ioctl_index = x"04" then
 				cnt_txadr <= cnt_txadr + 1;
 				-- save byte to block buffer
 				buff_adr    <= std_logic_vector(cnt_txadr(6 downto 0));
 				buff_we_n   <= '0';
 				buff_di     <= dl_data;
+				-- calc max block number
+				if    block_nr = x"00" and buff_adr = b"0010000" then	-- x"10"
+					load_adr_start(7 downto 0)  <= unsigned(dl_data);
+				elsif block_nr = x"00" and buff_adr = b"0010001" then	-- x"11"
+					load_adr_start(15 downto 8) <= unsigned(dl_data);
+				elsif block_nr = x"00" and buff_adr = b"0010010" then	-- x"12"
+					load_adr_end(7 downto 0)    <= unsigned(dl_data);
+				elsif block_nr = x"00" and buff_adr = b"0010011" then	-- x"13"
+					load_adr_end(15 downto 8)   <= unsigned(dl_data);
+				elsif block_nr = x"00" and buff_adr = b"0010100" then	-- x"14"
+					load_size <= load_adr_end - load_adr_start;
+				elsif block_nr = x"00" and buff_adr = b"0010101" then	-- x"15"
+					--block_nr_max <= load_size(14 downto 7) + 2;
+					block_nr_max <= load_size(14 downto 7) + 1;
+				end if;
 				-- block complete
 				if cnt_txadr(6 downto 0) = b"1111111" then
 					dl_readbyte  <= '0';
@@ -222,6 +260,11 @@ begin
 					cnt_txadr    <= x"00";
 					tx_cnt_block <= x"000";
 					cnt_cut_head <= x"01";
+					if block_nr /= block_nr_max then
+						block_nr <= block_nr + 1;
+					else
+						block_nr <= x"ff";
+					end if;
 				end if;
 			end if;
 		end if;
@@ -234,11 +277,13 @@ begin
 			cnt_cut_head <= x"11";
 			cnt_txadr    <= x"00";
 			LED_DISK     <= b"10";
+			block_nr     <= x"00";
+			block_nr_max <= x"ff";
 		elsif dl_readbyte = '0' then
 			ioctl_wait  <= '1';
 		elsif ioctl_wr = '0' then
 			ioctl_wait  <= '0';
-		elsif ioctl_wr = '1'  and ioctl_index = x"03" then
+		elsif ioctl_wr = '1'  and (ioctl_index = x"03" or ioctl_index = x"04") then
 			ioctl_wait  <= '1';
 			dl_readbyte <= '0';
 			dl_adr      <= ioctl_addr;
